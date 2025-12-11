@@ -1,0 +1,1973 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Fusion Layout Viewer</title>
+    <link rel="icon" type="image/png"
+        href="https://media.forgecdn.net/avatars/thumbnails/835/860/64/64/638227854854712053.png" />
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #101010;
+            font-family: system-ui, sans-serif;
+            color: white;
+        }
+
+        #info {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 6px;
+            font-size: 13px;
+            z-index: 10;
+            max-width: 520px;
+        }
+
+        #layoutSelector {
+            position: fixed;
+            top: 10px;
+            left: 10.5rem;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 6px;
+            font-size: 13px;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        #layoutSelector label {
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        #layoutSelector select {
+            padding: 6px 10px;
+            border-radius: 4px;
+            border: 1px solid #444;
+            background: #222;
+            color: white;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        #layoutSelector select:hover {
+            border-color: #666;
+        }
+
+        #layoutDescription {
+            font-size: 11px;
+            color: #aaa;
+            margin-top: 4px;
+            line-height: 1.4;
+        }
+
+        .atlasPreview {
+            position: fixed;
+            right: 10px;
+            max-width: 256px;
+            max-height: 256px;
+            border: 1px solid #ffffff;
+            image-rendering: pixelated;
+            background: #000;
+            z-index: 9;
+        }
+
+        #atlasPreviewVertical {
+            top: 10px;
+        }
+
+        #atlasPreviewHorizontal {
+            top: 290px;
+            /* Default, will be updated dynamically */
+        }
+
+        .atlasLabel {
+            position: fixed;
+            right: 10px;
+            font-size: 12px;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 2px 6px;
+            z-index: 9;
+        }
+
+        #labelVertical {
+            top: 10px;
+            transform: translateY(-18px);
+        }
+
+        #labelHorizontal {
+            top: 290px;
+            /* Default, will be updated dynamically */
+            transform: translateY(-18px);
+        }
+
+        #autoReloadContainer {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 6px;
+            font-size: 13px;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #autoReloadContainer input,
+        #autoReloadContainer label {
+            cursor: pointer;
+        }
+
+        #autoReloadContainer label {
+            user-select: none;
+        }
+
+        #reloadStatus {
+            font-size: 11px;
+            color: #888;
+            margin-left: 8px;
+        }
+
+        #reloadStatus.active {
+            color: #4f4;
+        }
+
+        .textureUpload {
+            position: fixed;
+            right: 275px;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        #uploadVertical {
+            top: 10px;
+        }
+
+        #uploadHorizontal {
+            top: 290px;
+            /* Default, will be updated dynamically */
+        }
+
+        .uploadBtn {
+            padding: 6px 10px;
+            border-radius: 4px;
+            border: 1px solid #444;
+            background: #222;
+            color: white;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .uploadBtn:hover {
+            border-color: #666;
+            background: #333;
+        }
+
+        .uploadBtn.loaded {
+            border-color: #4a4;
+            background: #243;
+        }
+
+        .fileName {
+            font-size: 10px;
+            color: #888;
+            max-width: 100px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .urlInput {
+            padding: 4px 6px;
+            border-radius: 4px;
+            border: 1px solid #444;
+            background: #222;
+            color: white;
+            font-size: 10px;
+            width: 120px;
+        }
+
+        .urlInput:focus {
+            outline: none;
+            border-color: #666;
+        }
+
+        .urlInput::placeholder {
+            color: #666;
+        }
+
+        .loadUrlBtn {
+            padding: 4px;
+            border-radius: 4px;
+            border: 1px solid #444;
+            background: #333;
+            color: white;
+            font-size: 10px;
+            cursor: pointer;
+            aspect-ratio: 1/1;
+            height: full;
+        }
+
+        .loadUrlBtn:hover {
+            border-color: #666;
+            background: #444;
+        }
+
+        .urlRow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            padding: 0;
+        }
+
+        #texturePresets {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 6px;
+            font-size: 13px;
+            z-index: 10;
+            display: flex;
+            gap: 8px;
+        }
+
+        .presetBtn {
+            padding: 6px 12px;
+            border-radius: 4px;
+            border: 1px solid #444;
+            background: #222;
+            color: white;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .presetBtn:hover {
+            border-color: #666;
+            background: #333;
+        }
+
+        .presetBtn.active {
+            border-color: #4a4;
+            background: #243;
+        }
+    </style>
+
+    <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+    }
+  }
+  </script>
+</head>
+
+<body>
+
+    <div id="info">
+        <!-- <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <path id="semi" d="M -110,0
+             A 110,110 0 0 1 110,0
+             L 110,110
+             L -110,110 Z" />
+                <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+                    <feDropShadow dx="0" dy="8" stdDeviation="10" flood-opacity="0.35" />
+                </filter>
+                <pattern id="texturePattern" patternUnits="userSpaceOnUse" width="20" height="20">
+                    <rect x="0" y="0" width="20" height="20" fill="#c47bff" />
+                    <rect x="0" y="0" width="10" height="10" fill="#d593ff" />
+                    <rect x="10" y="10" width="10" height="10" fill="#d593ff" />
+                </pattern>
+            </defs>
+            <g transform="translate(256 256) skewX(-10)">
+                <use href="#semi" fill="#64ff3a" filter="url(#shadow)" transform="translate(-90,-90) rotate(-20)" />
+
+                <use href="#semi" fill="#ff9a2a" filter="url(#shadow)" transform="translate(90,-90) rotate(70)" />
+
+                <use href="#semi" fill="#2ab9ff" filter="url(#shadow)" transform="translate(-90,90) rotate(-110)" />
+
+                <use href="#semi" fill="url(#texturePattern)" filter="url(#shadow)"
+                    transform="translate(90,90) rotate(160)" />
+            </g>
+        </svg> -->
+        <img src="https://media.forgecdn.net/avatars/thumbnails/835/860/64/64/638227854854712053.png" alt="Fusion Logo"
+            style="height: 64px;" />
+        <br />Fusion Layout Viewer<br />
+        <a href="https://github.com/SuperMartijn642/Fusion/wiki/Texture-Types" target="_blank"
+            style="color: #8af;">Documentation</a>
+    </div>
+
+    <div id="layoutSelector">
+        <label for="layoutSelect">Layout Type:</label>
+        <select id="layoutSelect">
+            <option value="full">Full (8x8)</option>
+            <option value="simple">Simple (4x4)</option>
+            <option value="compact">Compact (5x1)</option>
+            <option value="horizontal">Horizontal (4x1)</option>
+            <option value="vertical">Vertical (1x4)</option>
+        </select>
+        <div id="layoutDescription">64 tiles for all neighbor combinations</div>
+    </div>
+
+    <div id="autoReloadContainer">
+        <input type="checkbox" id="autoReload" />
+        <label for="autoReload">Auto-reload textures</label>
+        <span id="reloadStatus"></span>
+    </div>
+
+    <div id="labelVertical" class="atlasLabel">Vertical (sides)</div>
+    <canvas id="atlasPreviewVertical" class="atlasPreview"></canvas>
+
+    <div id="uploadVertical" class="textureUpload">
+        <button class="uploadBtn" onclick="document.getElementById('fileVertical').click()">
+            Load Vertical
+        </button>
+        <input type="file" id="fileVertical" accept="image/png" style="display: none" />
+        <span id="fileNameVertical" class="fileName"></span>
+        <div class="urlRow">
+            <input type="text" id="urlVertical" class="urlInput" placeholder="URL..." />
+            <button class="loadUrlBtn" id="loadUrlVerticalBtn">→</button>
+        </div>
+    </div>
+
+    <div id="labelHorizontal" class="atlasLabel">Horizontal (top/bottom)</div>
+    <canvas id="atlasPreviewHorizontal" class="atlasPreview"></canvas>
+
+    <div id="uploadHorizontal" class="textureUpload">
+        <button class="uploadBtn" onclick="document.getElementById('fileHorizontal').click()">
+            Load Horizontal
+        </button>
+        <input type="file" id="fileHorizontal" accept="image/png" style="display: none" />
+        <span id="fileNameHorizontal" class="fileName"></span>
+        <div class="urlRow">
+            <input type="text" id="urlHorizontal" class="urlInput" placeholder="URL..." />
+            <button class="loadUrlBtn" id="loadUrlHorizontalBtn">→</button>
+        </div>
+    </div>
+
+    <div id="texturePresets">
+        <button class="presetBtn" id="presetCurrent">Current</button>
+        <button class="presetBtn" id="presetNumbered">Numbered</button>
+        <button class="presetBtn" id="presetExample">Example</button>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js';
+
+
+        /**
+         * ============================================================================
+         * GLOSSARY / KEY TERMS
+         * ============================================================================
+         * 
+         * Atlas:
+         *   A single image containing multiple smaller images (tiles) arranged in a grid.
+         *   Instead of loading 64 separate textures, we pack them all into one image.
+         *   This is more efficient for the GPU and reduces HTTP requests.
+         * 
+         * Tile:
+         *   One individual texture within the atlas.
+         *   Each tile represents a specific neighbor configuration (edges, corners, etc.).
+         * 
+         * UV Coordinates:
+         *   A 2D coordinate system (U = horizontal, V = vertical) used to map a texture onto 3D geometry.
+         *   Values range from 0 to 1. UV (0,0) is typically bottom-left, (1,1) is top-right.
+         * 
+         * Neighbor:
+         *   An adjacent cube in 3D space. Each face checks its neighbors to pick the right tile.
+         * 
+         * Layout Types:
+         *   - Full (8x8):       64 tiles, handles all neighbor combinations including diagonals
+         *   - Simple (4x4):     16 tiles, handles direct neighbors only (no diagonals)
+         *   - Compact (5x1):    5 tiles, for reduced patterns with borders
+         *   - Horizontal (4x1): 4 tiles, single row of cubes
+         *   - Vertical (1x4):   4 tiles, single column of cubes
+         * 
+         */
+
+
+        /**
+         * ============================================================================
+         * LAYOUT DEFINITIONS
+         * Each layout defines its texture dimensions, tile mapping, and demo patterns
+         * ============================================================================
+         */
+
+        const layouts = {
+            full: {
+                name: 'Full',
+                description: '48 tiles (8x6) or 64 tiles (8x8) for all neighbor combinations',
+                columns: 8,
+                rows: 6,  // Default, will be auto-detected from image (6 or 8)
+                autoDetectRows: true,  // Enable dynamic row detection
+                horizontalTexture: 'textures/full_horizontal.png',
+                verticalTexture: 'textures/full_vertical.png',
+                patternsPerRow: 8,
+                spacingX: 24,
+                spacingZ: 24,
+                // CSV patterns to demonstrate all tile types
+                csv: `
+1,,10,12,,2,3,4,,9,,5,4,,2,6,,,9,,9,,,2,8,4,,,9,,,,9,,10,12,,10,11,12,,5,3,6,,10,11,12,,10,12,,9,,,,9,,10,24,4,,,10,12,,10,11,12,,,9,,,,10,12,,10,12,,,,9,,,10,11,12,,10,12,,,,10,12,,10,11,12,,10,12,,,,10,12,,10,12,,,,9,,,,9,,,,10,12,,9,,2,4
+,,26,28,,,,,,17,,25,,,,25,,2,14,,13,4,,,25,,,2,15,4,,10,30,,21,28,,26,27,28,,17,,17,,18,19,20,,18,20,,7,4,,2,16,,26,28,,,2,31,28,,26,43,28,,10,36,12,,2,35,20,,19,44,4,,2,34,4,,26,40,20,,18,47,12,,10,48,20,,18,39,28,,26,41,12,,10,33,28,,26,46,4,,2,37,12,,10,38,4,,2,45,28,,25,,,
+,,,,,,,,,25,,,,,,,,,,,,,,,,,,,,,,26,28,,25,,,,,,,13,3,14,,26,27,28,,26,28,,25,,,,25,,,,,,,,,,,25,,,26,27,28,,,26,28,,26,28,,,,25,,,,26,28,,26,27,28,,26,27,28,,26,28,,,,26,28,,26,28,,,,25,,,,26,28,,26,28,,,,25
+`.trim(),
+                findTilePosition: findFullTilePosition
+            },
+
+            simple: {
+                name: 'Simple',
+                description: '16 tiles for direct neighbors only (no diagonals)',
+                columns: 4,
+                rows: 4,
+                horizontalTexture: 'textures/simple_horizontal.png',
+                verticalTexture: 'textures/simple_vertical.png',
+                patternsPerRow: 8,
+                spacingX: 24,
+                spacingZ: 24,
+                // Same patterns as full, but simpler tile selection
+                csv: `
+1,,10,12,,2,3,4,,9,,5,4,,2,6,,,9,,9,,,2,8,4,,,9,,,,9,,10,12,,10,11,12,,5,3,6,,10,11,12,,10,12,,9,,,,9,,10,24,4,,,10,12,,10,11,12,,,9,,,,10,12,,10,12,,,,9,,,10,11,12,,10,12,,,,10,12,,10,11,12,,10,12,,,,10,12,,10,12,,,,9,,,,9,,,,10,12,,9,,2,4
+,,26,28,,,,,,17,,25,,,,25,,2,14,,13,4,,,25,,,2,15,4,,10,30,,21,28,,26,27,28,,17,,17,,18,19,20,,18,20,,7,4,,2,16,,26,28,,,2,31,28,,26,43,28,,10,36,12,,2,35,20,,19,44,4,,2,34,4,,26,40,20,,18,47,12,,10,48,20,,18,39,28,,26,41,12,,10,33,28,,26,46,4,,2,37,12,,10,38,4,,2,45,28,,25,,,
+,,,,,,,,,25,,,,,,,,,,,,,,,,,,,,,,26,28,,25,,,,,,,13,3,14,,26,27,28,,26,28,,25,,,,25,,,,,,,,,,,25,,,26,27,28,,,26,28,,26,28,,,,25,,,,26,28,,26,27,28,,26,27,28,,26,28,,,,26,28,,26,28,,,,25,,,,26,28,,26,28,,,,25
+`.trim(),
+                findTilePosition: findSimpleTilePosition
+            },
+
+            compact: {
+                name: 'Compact',
+                description: '5 tiles for reduced patterns with borders',
+                columns: 5,
+                rows: 1,
+                horizontalTexture: 'textures/compact_horizontal.png',
+                verticalTexture: 'textures/compact_vertical.png',
+                patternsPerRow: 6,
+                spacingX: 20,
+                spacingZ: 20,
+                csv: `
+1,,1,1,1,,1,,1,1,1,,,1
+,,1,1,1,,1,,,,,,1,1,1
+,,1,1,1,,1,,,,,,,1
+`.trim(),
+                findTilePosition: findCompactTilePosition
+            },
+
+            horizontal: {
+                name: 'Horizontal',
+                description: '4 tiles for single horizontal row',
+                columns: 4,
+                rows: 1,
+                singleTexture: true,  // Only one texture for all faces
+                horizontalTexture: 'textures/horizontal.png',
+                verticalTexture: 'textures/horizontal.png',
+                patternsPerRow: 2,
+                spacingX: 8,
+                spacingZ: 8,
+                csv: `1,,1,2,,1,2,3`.trim(),
+                findTilePosition: findHorizontalTilePosition
+            },
+
+            vertical: {
+                name: 'Vertical',
+                description: '4 tiles for single vertical column',
+                columns: 1,
+                rows: 4,
+                singleTexture: true,  // Only one texture for all faces
+                horizontalTexture: 'textures/vertical.png',
+                verticalTexture: 'textures/vertical.png',
+                patternsPerRow: 4,
+                spacingX: 8,
+                spacingZ: 8,
+                csv: `
+1,,1,,1,,1
+,,2,,2,,2
+,,,,3,,3
+,,,,,,4
+`.trim(),
+                findTilePosition: findVerticalTilePosition
+            }
+        };
+
+
+        /**
+         * ============================================================================
+         * TILE POSITION FUNCTIONS
+         * Each layout has its own algorithm to map neighbors to tile coordinates
+         * ============================================================================
+         */
+
+        /**
+         * Full layout (8x8): All 64 combinations with diagonal awareness
+         * @see https://github.com/SuperMartijn642/Fusion/blob/forge-1.20/src/main/java/com/supermartijn642/fusion/texture/types/connecting/layouts/FullLayoutHandler.java
+         */
+        function findFullTilePosition(neighbors) {
+            const { top, topRight, right, bottomRight, bottom, bottomLeft, left, topLeft } = neighbors;
+
+            // Case 1: Isolated cube (no direct neighbors)
+            if (!left && !top && !right && !bottom) {
+                return [0, 0];
+            }
+
+            // Case 2: Single direct neighbor
+            if (left && !top && !right && !bottom) return [3, 0];
+            if (!left && top && !right && !bottom) return [0, 3];
+            if (!left && !top && right && !bottom) return [1, 0];
+            if (!left && !top && !right && bottom) return [0, 1];
+
+            // Case 3: Two opposite neighbors (straight line)
+            if (left && !top && right && !bottom) return [2, 0];
+            if (!left && top && !right && bottom) return [0, 2];
+
+            // Case 4: Two adjacent neighbors (corner)
+            if (left && top && !right && !bottom) {
+                return topLeft ? [3, 3] : [5, 1];
+            }
+            if (!left && top && right && !bottom) {
+                return topRight ? [1, 3] : [4, 1];
+            }
+            if (!left && !top && right && bottom) {
+                return bottomRight ? [1, 1] : [4, 0];
+            }
+            if (left && !top && !right && bottom) {
+                return bottomLeft ? [3, 1] : [5, 0];
+            }
+
+            // Case 5: Three neighbors (edge of a surface)
+            if (!left) {
+                if (topRight && bottomRight) return [1, 2];
+                if (topRight) return [4, 2];
+                if (bottomRight) return [6, 2];
+                return [6, 0];
+            }
+            if (!top) {
+                if (bottomLeft && bottomRight) return [2, 1];
+                if (bottomLeft) return [7, 2];
+                if (bottomRight) return [5, 2];
+                return [7, 0];
+            }
+            if (!right) {
+                if (topLeft && bottomLeft) return [3, 2];
+                if (topLeft) return [7, 3];
+                if (bottomLeft) return [5, 3];
+                return [7, 1];
+            }
+            if (!bottom) {
+                if (topLeft && topRight) return [2, 3];
+                if (topLeft) return [4, 3];
+                if (topRight) return [6, 3];
+                return [6, 1];
+            }
+
+            // Case 6: Four direct neighbors (middle of a surface)
+            if (topLeft && topRight && bottomLeft && bottomRight) {
+                return [2, 2];
+            }
+
+            // Single missing corner
+            if (!topLeft && topRight && bottomLeft && bottomRight) return [7, 5];
+            if (topLeft && !topRight && bottomLeft && bottomRight) return [6, 5];
+            if (topLeft && topRight && !bottomLeft && bottomRight) return [7, 4];
+            if (topLeft && topRight && bottomLeft && !bottomRight) return [6, 4];
+
+            // Two opposite corners missing
+            if (!topLeft && topRight && !bottomRight && bottomLeft) return [0, 4];
+            if (topLeft && !topRight && bottomRight && !bottomLeft) return [0, 5];
+
+            // Two adjacent corners missing
+            if (!topLeft && !topRight && bottomRight && bottomLeft) return [3, 4];
+            if (topLeft && !topRight && !bottomRight && bottomLeft) return [3, 5];
+            if (topLeft && topRight && !bottomRight && !bottomLeft) return [2, 5];
+            if (!topLeft && topRight && bottomRight && !bottomLeft) return [2, 4];
+
+            // Single corner present
+            if (topLeft) return [5, 5];
+            if (topRight) return [4, 5];
+            if (bottomRight) return [4, 4];
+            if (bottomLeft) return [5, 4];
+
+            // No corners
+            return [1, 4];
+        }
+
+        /**
+         * Simple layout (4x4): Only direct neighbors, no diagonals
+         * @see https://github.com/SuperMartijn642/Fusion/blob/forge-1.20/src/main/java/com/supermartijn642/fusion/texture/types/connecting/layouts/SimpleLayoutHandler.java
+         */
+        function findSimpleTilePosition(neighbors) {
+            const { top, right, bottom, left } = neighbors;
+
+            // Fusion algorithm: Match exact logic from SimpleLayoutHandler.java
+            // connectionsIndex = (top?1:0) | (right?2:0) | (bottom?4:0) | (left?8:0)
+
+            // Count sides connected
+            const sides = (top ? 1 : 0) + (right ? 1 : 0) + (bottom ? 1 : 0) + (left ? 1 : 0);
+
+            // 0 sides - isolated
+            if (sides === 0) {
+                return [0, 0];
+            }
+
+            // 1 side only
+            if (sides === 1) {
+                if (left) return [3, 0];
+                if (top) return [3, 1];
+                if (right) return [2, 1];
+                if (bottom) return [2, 0];
+            }
+
+            // 2 sides
+            if (sides === 2) {
+                // Straight lines
+                if (left && right && !top && !bottom) return [0, 1];  // horizontal
+                if (top && bottom && !left && !right) return [1, 1];  // vertical
+
+                // Corners
+                if (left && top) return [3, 3];  // top-left
+                if (top && right) return [2, 3];  // top-right
+                if (right && bottom) return [2, 2]; // bottom-right
+                if (bottom && left) return [3, 2];  // bottom-left
+            }
+
+            // 3 sides (T-junctions)
+            if (sides === 3) {
+                if (!left) return [0, 2];  // T facing left (no left)
+                if (!top) return [1, 2];  // T facing up (no top)
+                if (!right) return [1, 3];  // T facing right (no right)
+                if (!bottom) return [0, 3];  // T facing down (no bottom)
+            }
+
+            // 4 sides - all connected
+            return [1, 0];
+        }
+
+        /**
+         * Compact layout (5x1): Reduced patterns with borders
+         * @see https://github.com/SuperMartijn642/Fusion/blob/forge-1.20/src/main/java/com/supermartijn642/fusion/texture/types/connecting/layouts/CompactLayoutHandler.java
+         */
+        function findCompactTilePosition(neighbors) {
+            const { top, right, bottom, left, topLeft, topRight, bottomLeft, bottomRight } = neighbors;
+
+            const sides = (top ? 1 : 0) + (right ? 1 : 0) + (bottom ? 1 : 0) + (left ? 1 : 0);
+
+            // 0 or 1 sides connected
+            if (sides === 0 || sides === 1) {
+                return [0, 0];
+            }
+
+            // 2 sides
+            if (sides === 2) {
+                if (left && right) return [3, 0];      // Horizontal straight
+                if (top && bottom) return [2, 0];      // Vertical straight
+                return [0, 0];                          // Corner
+            }
+
+            // 3 sides
+            if (sides === 3) {
+                if (left && right) {
+                    // Has horizontal + one vertical
+                    if ((topLeft && top && topRight) || (bottomLeft && bottom && bottomRight)) {
+                        return [3, 0];  // Full horizontal with corner
+                    }
+                    return [0, 0];
+                }
+                if (top && bottom) {
+                    // Has vertical + one horizontal
+                    if ((topLeft && left && bottomLeft) || (topRight && right && bottomRight)) {
+                        return [2, 0];  // Full vertical with corner
+                    }
+                    return [0, 0];
+                }
+                return [0, 0];
+            }
+
+            // 4 sides
+            if (topLeft && topRight && bottomLeft && bottomRight) {
+                return [1, 0];  // All 4 sides + all corners
+            }
+            if (!topLeft && !topRight && !bottomLeft && !bottomRight) {
+                return [4, 0];  // All 4 sides, no corners
+            }
+            return [0, 0];      // Mixed corners
+        }
+
+        /**
+         * Horizontal layout (4x1): Left/right connections only
+         * @see https://github.com/SuperMartijn642/Fusion/blob/forge-1.20/src/main/java/com/supermartijn642/fusion/texture/types/connecting/layouts/HorizontalLayoutHandler.java
+         */
+        function findHorizontalTilePosition(neighbors) {
+            const { left, right } = neighbors;
+
+            if (left && right) return [2, 0];  // Both sides connected
+            if (left && !right) return [3, 0];  // Only left connected (right end)
+            if (!left && right) return [1, 0];  // Only right connected (left end)
+            return [0, 0];                        // Isolated (none)
+        }
+
+        /**
+         * Vertical layout (1x4): Top/bottom connections only
+         * @see https://github.com/SuperMartijn642/Fusion/blob/forge-1.20/src/main/java/com/supermartijn642/fusion/texture/types/connecting/layouts/VerticalLayoutHandler.java
+         */
+        function findVerticalTilePosition(neighbors) {
+            const { top, bottom } = neighbors;
+
+            if (top && bottom) return [0, 2];  // Both sides connected
+            if (top && !bottom) return [0, 3];  // Only top connected (bottom end)
+            if (!top && bottom) return [0, 1];  // Only bottom connected (top end)
+            return [0, 0];                        // Isolated (none)
+        }
+
+
+        /**
+         * ============================================================================
+         * CONFIGURATION (dynamic, changes with layout)
+         * ============================================================================
+         */
+
+        let currentLayout = 'full';
+        let detectedRows = null;  // Rows detected from loaded texture (for layouts with autoDetectRows)
+        
+        // Track currently loaded texture URLs (for auto-reload)
+        let currentVerticalUrl = null;
+        let currentHorizontalUrl = null;
+
+        const config = {
+            get columns() { return layouts[currentLayout].columns; },
+            get rows() {
+                // Use detected rows if available and layout supports it
+                if (detectedRows !== null && layouts[currentLayout].autoDetectRows) {
+                    return detectedRows;
+                }
+                return layouts[currentLayout].rows;
+            },
+            get horizontalTexture() { return layouts[currentLayout].horizontalTexture; },
+            get verticalTexture() { return layouts[currentLayout].verticalTexture; },
+            get patternsPerRow() { return layouts[currentLayout].patternsPerRow; },
+            get spacingX() { return layouts[currentLayout].spacingX; },
+            get spacingZ() { return layouts[currentLayout].spacingZ; },
+            get csv() { return layouts[currentLayout].csv; },
+            get findTilePosition() { return layouts[currentLayout].findTilePosition; },
+
+            // Fixed values
+            cubeSize: 4,
+            upscaleFactor: 8,
+            reloadInterval: 1000
+        };
+
+
+        /**
+         * ============================================================================
+         * 3D SCENE INITIALIZATION
+         * ============================================================================
+         */
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x202020);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(20, 30, 55);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.toneMapping = THREE.NoToneMapping;
+        document.body.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.target.set(50, 0, 20);
+        controls.update();
+
+
+        /**
+         * ============================================================================
+         * TEXTURE MANAGEMENT
+         * ============================================================================
+         */
+
+        const loader = new THREE.TextureLoader();
+        let horizontalTexture = null;
+        let verticalTexture = null;
+
+        /**
+         * Creates an upscaled texture for crisp pixel-art rendering.
+         * Also detects the actual number of rows for layouts with autoDetectRows.
+         */
+        function createUpscaledTexture(originalTexture, previewCanvasId) {
+            const image = originalTexture.image;
+            const width = image.width;
+            const height = image.height;
+
+            // Auto-detect rows based on image aspect ratio for layouts that support it
+            if (layouts[currentLayout].autoDetectRows) {
+                const columns = layouts[currentLayout].columns;
+                const tileWidth = width / columns;
+                const calculatedRows = Math.round(height / tileWidth);
+
+                // For full layout: support 8×6 (ratio 4:3) or 8×8 (ratio 1:1)
+                if (currentLayout === 'full') {
+                    detectedRows = (calculatedRows >= 7) ? 8 : 6;
+                    console.log(`Full layout: detected ${detectedRows} rows from ${width}×${height} image`);
+                } else {
+                    detectedRows = calculatedRows;
+                }
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width * config.upscaleFactor;
+            canvas.height = height * config.upscaleFactor;
+
+            const ctx = canvas.getContext('2d');
+            ctx.imageSmoothingEnabled = false;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Vertical flip for Three.js UV coordinates
+            ctx.save();
+            ctx.translate(0, canvas.height);
+            ctx.scale(1, -1);
+            ctx.drawImage(image, 0, 0, width, height, 0, 0, canvas.width, canvas.height);
+            ctx.restore();
+
+            if (previewCanvasId) {
+                drawAtlasPreview(image, previewCanvasId);
+            }
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.magFilter = THREE.NearestFilter;
+            texture.minFilter = THREE.NearestFilter;
+            texture.generateMipmaps = false;
+            texture.wrapS = THREE.ClampToEdgeWrapping;
+            texture.wrapT = THREE.ClampToEdgeWrapping;
+            texture.flipY = false;
+            texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+            texture.colorSpace = THREE.SRGBColorSpace;
+            texture.needsUpdate = true;
+
+            return texture;
+        }
+
+        /**
+         * Draws the atlas preview with grid overlay.
+         * Handles non-square textures (e.g., compact 5×1, vertical 1×4)
+         */
+        function drawAtlasPreview(image, canvasId) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+
+            // Calculate preview size to fit within 256px while keeping aspect ratio
+            const maxPreviewSize = 256;
+            const aspectRatio = image.width / image.height;
+
+            let previewWidth, previewHeight;
+            if (aspectRatio >= 1) {
+                // Wider than tall (horizontal layouts like compact)
+                previewWidth = maxPreviewSize;
+                previewHeight = Math.max(32, maxPreviewSize / aspectRatio);
+            } else {
+                // Taller than wide (vertical layouts)
+                previewHeight = maxPreviewSize;
+                previewWidth = Math.max(32, maxPreviewSize * aspectRatio);
+            }
+
+            canvas.width = previewWidth;
+            canvas.height = previewHeight;
+            canvas.style.width = previewWidth + 'px';
+            canvas.style.height = previewHeight + 'px';
+
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(image, 0, 0, image.width, image.height, 0, 0, previewWidth, previewHeight);
+
+            const width = previewWidth;
+            const height = previewHeight;
+
+            // Green grid
+            ctx.strokeStyle = 'rgba(0, 255, 0, 0.8)';
+            ctx.lineWidth = 1;
+
+            for (let col = 0; col <= config.columns; col++) {
+                const x = (col * width) / config.columns + 0.5;
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, height);
+                ctx.stroke();
+            }
+
+            for (let row = 0; row <= config.rows; row++) {
+                const y = (row * height) / config.rows + 0.5;
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(width, y);
+                ctx.stroke();
+            }
+
+            // Red dots at corners
+            ctx.fillStyle = 'rgba(255, 0, 0, 0.9)';
+            for (let row = 0; row <= config.rows; row++) {
+                for (let col = 0; col <= config.columns; col++) {
+                    const x = (col * width) / config.columns;
+                    const y = (row * height) / config.rows;
+                    ctx.beginPath();
+                    ctx.arc(x, y, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            // Update positions of horizontal elements based on vertical canvas height
+            updatePreviewPositions();
+        }
+
+        /**
+         * Repositions horizontal preview elements based on vertical canvas size.
+         * Called after drawing atlas preview to handle non-square textures.
+         */
+        function updatePreviewPositions() {
+            const verticalCanvas = document.getElementById('atlasPreviewVertical');
+            const verticalHeight = verticalCanvas.offsetHeight || 256;
+
+            const horizontalTop = 10 + verticalHeight + 20; // 10px margin + canvas + 20px gap
+
+            document.getElementById('atlasPreviewHorizontal').style.top = horizontalTop + 'px';
+            document.getElementById('labelHorizontal').style.top = horizontalTop + 'px';
+            document.getElementById('labelHorizontal').style.transform = 'translateY(-18px)';
+            document.getElementById('uploadHorizontal').style.top = horizontalTop + 'px';
+        }
+
+        /**
+         * Loads textures for the current layout.
+         */
+        function loadTextures(callback) {
+            const isSingleTexture = layouts[currentLayout].singleTexture;
+            let loaded = 0;
+            const targetLoads = isSingleTexture ? 1 : 2;
+
+            const onLoad = () => {
+                loaded++;
+                if (loaded === targetLoads && callback) {
+                    callback();
+                }
+            };
+
+            if (isSingleTexture) {
+                // Single texture mode: load once and use for both
+                loader.load(config.horizontalTexture, (tex) => {
+                    horizontalTexture = createUpscaledTexture(tex, 'atlasPreviewVertical');
+                    verticalTexture = horizontalTexture;  // Same texture for both
+                    onLoad();
+                }, undefined, (err) => {
+                    console.warn(`Failed to load ${config.horizontalTexture}:`, err);
+                    onLoad();
+                });
+            } else {
+                // Dual texture mode: load both separately
+                loader.load(config.horizontalTexture, (tex) => {
+                    horizontalTexture = createUpscaledTexture(tex, 'atlasPreviewHorizontal');
+                    onLoad();
+                }, undefined, (err) => {
+                    console.warn(`Failed to load ${config.horizontalTexture}:`, err);
+                    onLoad();
+                });
+
+                loader.load(config.verticalTexture, (tex) => {
+                    verticalTexture = createUpscaledTexture(tex, 'atlasPreviewVertical');
+                    onLoad();
+                }, undefined, (err) => {
+                    console.warn(`Failed to load ${config.verticalTexture}:`, err);
+                    onLoad();
+                });
+            }
+        }
+
+
+        /**
+         * ============================================================================
+         * MATERIAL SYSTEM
+         * ============================================================================
+         */
+
+        let materialCache = new Map();
+
+        /**
+         * Gets or creates materials for a given tile.
+         */
+        function getMaterialsForTile(tileIndex) {
+            if (materialCache.has(tileIndex)) {
+                return materialCache.get(tileIndex);
+            }
+
+            const index = tileIndex - 1;
+            const column = index % config.columns;
+            const rowFromTop = Math.floor(index / config.columns);
+            const rowFromBottom = config.rows - 1 - rowFromTop;
+
+            const repeatX = 1 / config.columns;
+            const repeatY = 1 / config.rows;
+            const offsetX = column / config.columns;
+            const offsetY = rowFromBottom / config.rows;
+
+            const texH = horizontalTexture.clone();
+            texH.repeat.set(repeatX, repeatY);
+            texH.offset.set(offsetX, offsetY);
+            texH.needsUpdate = true;
+
+            const texV = verticalTexture.clone();
+            texV.repeat.set(repeatX, repeatY);
+            texV.offset.set(offsetX, offsetY);
+            texV.needsUpdate = true;
+
+            const materials = {
+                horizontal: new THREE.MeshBasicMaterial({ map: texH }),
+                vertical: new THREE.MeshBasicMaterial({ map: texV })
+            };
+
+            materialCache.set(tileIndex, materials);
+            return materials;
+        }
+
+        /**
+         * Clears the material cache (needed when switching layouts).
+         */
+        function clearMaterialCache() {
+            materialCache.forEach((mats) => {
+                mats.horizontal.dispose();
+                mats.vertical.dispose();
+            });
+            materialCache.clear();
+        }
+
+
+        /**
+         * ============================================================================
+         * FUSION TILE SELECTION
+         * ============================================================================
+         */
+
+        const faceOrientations = [
+            { up: [0, 1, 0], right: [0, 0, -1] },   // +X
+            { up: [0, 1, 0], right: [0, 0, 1] },    // -X
+            { up: [0, 0, -1], right: [1, 0, 0] },   // +Y
+            { up: [0, 0, 1], right: [1, 0, 0] },    // -Y
+            { up: [0, 1, 0], right: [1, 0, 0] },    // +Z
+            { up: [0, 1, 0], right: [-1, 0, 0] }    // -Z
+        ];
+
+        function positionToIndex(position) {
+            const [col, row] = position;
+            return col + row * config.columns + 1;
+        }
+
+        function analyzeNeighbors(cubeMap, cube, faceIndex) {
+            const { up, right } = faceOrientations[faceIndex];
+
+            const hasNeighbor = (dx, dy, dz) => {
+                return cubeMap.has(`${cube.x + dx},${cube.y + dy},${cube.z + dz}`);
+            };
+
+            return {
+                top: hasNeighbor(up[0], up[1], up[2]),
+                topRight: hasNeighbor(up[0] + right[0], up[1] + right[1], up[2] + right[2]),
+                right: hasNeighbor(right[0], right[1], right[2]),
+                bottomRight: hasNeighbor(-up[0] + right[0], -up[1] + right[1], -up[2] + right[2]),
+                bottom: hasNeighbor(-up[0], -up[1], -up[2]),
+                bottomLeft: hasNeighbor(-up[0] - right[0], -up[1] - right[1], -up[2] - right[2]),
+                left: hasNeighbor(-right[0], -right[1], -right[2]),
+                topLeft: hasNeighbor(up[0] - right[0], up[1] - right[1], up[2] - right[2])
+            };
+        }
+
+
+        /**
+         * ============================================================================
+         * MESH CREATION
+         * ============================================================================
+         */
+
+        let cubeGeometry = new THREE.BoxGeometry(config.cubeSize, config.cubeSize, config.cubeSize);
+
+        function createCubeMesh(cubeMap, cube) {
+            const materials = [];
+
+            for (let faceIndex = 0; faceIndex < 6; faceIndex++) {
+                const neighbors = analyzeNeighbors(cubeMap, cube, faceIndex);
+                const tilePosition = config.findTilePosition(neighbors);
+                const tileIndex = positionToIndex(tilePosition);
+                const mats = getMaterialsForTile(tileIndex);
+
+                const isHorizontalFace = (faceIndex === 2 || faceIndex === 3);
+                materials[faceIndex] = isHorizontalFace ? mats.horizontal : mats.vertical;
+            }
+
+            return new THREE.Mesh(cubeGeometry, materials);
+        }
+
+
+        /**
+         * ============================================================================
+         * CSV PARSING AND PATTERN BUILDING
+         * ============================================================================
+         */
+
+        function parsePatterns(csv, mode) {
+            const lines = csv.split('\n').map(line => line.split(','));
+            const numRows = lines.length;
+            const numCols = Math.max(...lines.map(l => l.length));
+
+            const columnHasValue = (col) => {
+                return lines.some(line => line[col]?.trim());
+            };
+
+            const patterns = [];
+            let col = 0;
+
+            while (col < numCols) {
+                while (col < numCols && !columnHasValue(col)) col++;
+                if (col >= numCols) break;
+
+                const patternStart = col;
+                while (col < numCols && columnHasValue(col)) col++;
+
+                const cubes = [];
+                for (let c = patternStart; c < col; c++) {
+                    for (let r = 0; r < numRows; r++) {
+                        const value = parseInt(lines[r][c]?.trim(), 10);
+                        if (isNaN(value)) continue;
+
+                        const localX = c - patternStart;
+
+                        if (mode === 'vertical') {
+                            cubes.push({ x: localX, y: numRows - 1 - r, z: 0, value });
+                        } else {
+                            cubes.push({ x: localX, y: 0, z: r, value });
+                        }
+                    }
+                }
+
+                patterns.push({ cubes });
+            }
+
+            return patterns;
+        }
+
+        function buildCubeMap(cubes) {
+            const map = new Map();
+            cubes.forEach(c => map.set(`${c.x},${c.y},${c.z}`, true));
+            return map;
+        }
+
+        // Keep track of pattern groups to remove them when switching layouts
+        let patternGroups = [];
+
+        function createPatternGroup(pattern, gridIndex, zOffset) {
+            const group = new THREE.Group();
+
+            const gridX = gridIndex % config.patternsPerRow;
+            const gridZ = Math.floor(gridIndex / config.patternsPerRow) + zOffset;
+            const baseX = gridX * config.spacingX;
+            const baseZ = gridZ * config.spacingZ;
+
+            const cubeMap = buildCubeMap(pattern.cubes);
+
+            pattern.cubes.forEach(cube => {
+                const mesh = createCubeMesh(cubeMap, cube);
+                mesh.position.set(
+                    baseX + cube.x * config.cubeSize,
+                    cube.y * config.cubeSize,
+                    baseZ + cube.z * config.cubeSize
+                );
+                group.add(mesh);
+            });
+
+            scene.add(group);
+            patternGroups.push(group);
+        }
+
+        function clearPatterns() {
+            patternGroups.forEach(group => {
+                group.traverse(obj => {
+                    if (obj.geometry) obj.geometry.dispose();
+                });
+                scene.remove(group);
+            });
+            patternGroups = [];
+        }
+
+        function buildPatterns() {
+            // For single-axis layouts, only render patterns in the appropriate orientation
+            if (currentLayout === 'vertical' || currentLayout === 'horizontal') {
+                const mode = (currentLayout === 'vertical') ? 'vertical' : 'horizontal';
+                const patterns = parsePatterns(config.csv, mode);
+
+                patterns.forEach((p, i) => createPatternGroup(p, i, 0));
+                return;
+            }
+
+            // For other layouts, render both vertical and horizontal pattern demonstrations
+            const verticalPatterns = parsePatterns(config.csv, 'vertical');
+            const horizontalPatterns = parsePatterns(config.csv, 'horizontal');
+
+            verticalPatterns.forEach((p, i) => createPatternGroup(p, i, 0));
+
+            const verticalRows = Math.ceil(verticalPatterns.length / config.patternsPerRow);
+            horizontalPatterns.forEach((p, i) => createPatternGroup(p, i, verticalRows + 1));
+        }
+
+
+        /**
+         * ============================================================================
+         * LAYOUT SWITCHING
+         * ============================================================================
+         */
+
+        function switchLayout(layoutName) {
+            if (!layouts[layoutName]) {
+                console.warn(`Unknown layout: ${layoutName}`);
+                return;
+            }
+
+            currentLayout = layoutName;
+            detectedRows = null;  // Reset detected rows for new layout
+            // Reset current URLs - will be restored by restoreLayoutUrls()
+            currentVerticalUrl = null;
+            currentHorizontalUrl = null;
+            localStorage.setItem('selectedLayout', layoutName);
+
+            // Update description
+            document.getElementById('layoutDescription').textContent = layouts[layoutName].description;
+
+            // Show/hide second texture UI based on singleTexture mode
+            const isSingleTexture = layouts[layoutName].singleTexture;
+            document.getElementById('atlasPreviewHorizontal').style.display = isSingleTexture ? 'none' : 'block';
+            document.getElementById('labelHorizontal').style.display = isSingleTexture ? 'none' : 'block';
+            document.getElementById('uploadHorizontal').style.display = isSingleTexture ? 'none' : 'flex';
+
+            // Update label for single texture mode
+            document.getElementById('labelVertical').textContent = isSingleTexture ? 'Texture' : 'Vertical (sides)';
+
+            // Clear existing scene
+            clearPatterns();
+            clearMaterialCache();
+
+            // Reload textures and rebuild
+            loadTextures(() => {
+                buildPatterns();
+            });
+        }
+
+
+        /**
+         * ============================================================================
+         * RENDER LOOP
+         * ============================================================================
+         */
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+
+        /**
+         * ============================================================================
+         * AUTO-RELOAD
+         * ============================================================================
+         */
+
+        let reloadIntervalId = null;
+        let lastModified = { horizontal: null, vertical: null };
+
+        const autoReloadCheckbox = document.getElementById('autoReload');
+        const reloadStatus = document.getElementById('reloadStatus');
+
+        async function checkForChanges() {
+            try {
+                const timestamp = Date.now();
+                
+                // Use currently loaded URLs (from user input) or fall back to default
+                const verticalUrl = currentVerticalUrl || config.verticalTexture;
+                const horizontalUrl = currentHorizontalUrl || config.horizontalTexture;
+
+                const [respH, respV] = await Promise.all([
+                    fetch(`${horizontalUrl}?t=${timestamp}`, { cache: 'no-store' }),
+                    fetch(`${verticalUrl}?t=${timestamp}`, { cache: 'no-store' })
+                ]);
+
+                const modH = respH.headers.get('Last-Modified') || respH.headers.get('ETag') || timestamp;
+                const modV = respV.headers.get('Last-Modified') || respV.headers.get('ETag') || timestamp;
+
+                let hasReloaded = false;
+
+                if (lastModified.horizontal && lastModified.horizontal !== modH) {
+                    await reloadTexture('horizontal');
+                    hasReloaded = true;
+                }
+                if (lastModified.vertical && lastModified.vertical !== modV) {
+                    await reloadTexture('vertical');
+                    hasReloaded = true;
+                }
+
+                lastModified.horizontal = modH;
+                lastModified.vertical = modV;
+
+                if (hasReloaded) {
+                    reloadStatus.textContent = `Reloaded at ${new Date().toLocaleTimeString()}`;
+                }
+            } catch (error) {
+                console.warn('Auto-reload check failed:', error);
+            }
+        }
+
+        function reloadTexture(type) {
+            return new Promise((resolve) => {
+                const isHorizontal = type === 'horizontal';
+                // Use currently loaded URLs (from user input) or fall back to default
+                const baseUrl = isHorizontal 
+                    ? (currentHorizontalUrl || config.horizontalTexture)
+                    : (currentVerticalUrl || config.verticalTexture);
+                const url = `${baseUrl}?t=${Date.now()}`;
+                const previewId = isHorizontal ? 'atlasPreviewHorizontal' : 'atlasPreviewVertical';
+
+                loader.load(url, (tex) => {
+                    const newTexture = createUpscaledTexture(tex, previewId);
+
+                    if (isHorizontal) {
+                        horizontalTexture = newTexture;
+                    } else {
+                        verticalTexture = newTexture;
+                    }
+
+                    materialCache.forEach((mats, tileIndex) => {
+                        const index = tileIndex - 1;
+                        const col = index % config.columns;
+                        const rowFromBottom = config.rows - 1 - Math.floor(index / config.columns);
+
+                        const repeatX = 1 / config.columns;
+                        const repeatY = 1 / config.rows;
+                        const offsetX = col / config.columns;
+                        const offsetY = rowFromBottom / config.rows;
+
+                        if (isHorizontal) {
+                            const newTex = horizontalTexture.clone();
+                            newTex.repeat.set(repeatX, repeatY);
+                            newTex.offset.set(offsetX, offsetY);
+                            newTex.needsUpdate = true;
+                            mats.horizontal.map = newTex;
+                            mats.horizontal.needsUpdate = true;
+                        } else {
+                            const newTex = verticalTexture.clone();
+                            newTex.repeat.set(repeatX, repeatY);
+                            newTex.offset.set(offsetX, offsetY);
+                            newTex.needsUpdate = true;
+                            mats.vertical.map = newTex;
+                            mats.vertical.needsUpdate = true;
+                        }
+                    });
+
+                    resolve();
+                });
+            });
+        }
+
+        function toggleAutoReload(enabled) {
+            localStorage.setItem('autoReload', enabled);
+
+            if (enabled) {
+                reloadStatus.textContent = 'Watching...';
+                reloadStatus.classList.add('active');
+                lastModified = { horizontal: null, vertical: null };
+                checkForChanges();
+                reloadIntervalId = setInterval(checkForChanges, config.reloadInterval);
+            } else {
+                reloadStatus.textContent = '';
+                reloadStatus.classList.remove('active');
+                if (reloadIntervalId) {
+                    clearInterval(reloadIntervalId);
+                    reloadIntervalId = null;
+                }
+            }
+        }
+
+        autoReloadCheckbox.addEventListener('change', () => {
+            toggleAutoReload(autoReloadCheckbox.checked);
+        });
+
+
+        /**
+         * ============================================================================
+         * TEXTURE FILE UPLOAD
+         * Allows loading custom textures from user's computer
+         * ============================================================================
+         */
+
+        const fileVerticalInput = document.getElementById('fileVertical');
+        const fileHorizontalInput = document.getElementById('fileHorizontal');
+        const fileNameVertical = document.getElementById('fileNameVertical');
+        const fileNameHorizontal = document.getElementById('fileNameHorizontal');
+
+        /**
+         * Loads a texture from a File object and updates the scene.
+         * For layouts with autoDetectRows, this may trigger a full rebuild if rows change.
+         */
+        function loadTextureFromFile(file, type) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        // Create a fake texture object to pass to createUpscaledTexture
+                        const fakeTexture = { image: img };
+                        const isHorizontal = type === 'horizontal';
+                        const previewId = isHorizontal ? 'atlasPreviewHorizontal' : 'atlasPreviewVertical';
+
+                        // Store old rows to detect if we need a full rebuild
+                        const oldRows = config.rows;
+
+                        const newTexture = createUpscaledTexture(fakeTexture, previewId);
+
+                        // For single texture layouts, update both textures
+                        const isSingleTexture = layouts[currentLayout].singleTexture;
+
+                        if (isSingleTexture) {
+                            horizontalTexture = newTexture;
+                            verticalTexture = newTexture;
+                        } else if (isHorizontal) {
+                            horizontalTexture = newTexture;
+                        } else {
+                            verticalTexture = newTexture;
+                        }
+
+                        // If rows changed (autoDetectRows), we need to rebuild everything
+                        if (layouts[currentLayout].autoDetectRows && config.rows !== oldRows) {
+                            console.log(`Rows changed from ${oldRows} to ${config.rows}, rebuilding scene...`);
+                            clearPatterns();
+                            clearMaterialCache();
+                            buildPatterns();
+                            resolve();
+                            return;
+                        }
+
+                        // Update all cached materials
+                        materialCache.forEach((mats, tileIndex) => {
+                            const index = tileIndex - 1;
+                            const col = index % config.columns;
+                            const rowFromBottom = config.rows - 1 - Math.floor(index / config.columns);
+
+                            const repeatX = 1 / config.columns;
+                            const repeatY = 1 / config.rows;
+                            const offsetX = col / config.columns;
+                            const offsetY = rowFromBottom / config.rows;
+
+                            // For single texture mode, update both materials
+                            if (isSingleTexture || isHorizontal) {
+                                const newTex = horizontalTexture.clone();
+                                newTex.repeat.set(repeatX, repeatY);
+                                newTex.offset.set(offsetX, offsetY);
+                                newTex.needsUpdate = true;
+                                mats.horizontal.map = newTex;
+                                mats.horizontal.needsUpdate = true;
+                            }
+                            if (isSingleTexture || !isHorizontal) {
+                                const newTex = verticalTexture.clone();
+                                newTex.repeat.set(repeatX, repeatY);
+                                newTex.offset.set(offsetX, offsetY);
+                                newTex.needsUpdate = true;
+                                mats.vertical.map = newTex;
+                                mats.vertical.needsUpdate = true;
+                            }
+                        });
+
+                        resolve();
+                    };
+                    img.src = e.target.result;
+                };
+
+                reader.readAsDataURL(file);
+            });
+        }
+
+        fileVerticalInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            fileNameVertical.textContent = file.name;
+            document.querySelector('#uploadVertical .uploadBtn').classList.add('loaded');
+
+            await loadTextureFromFile(file, 'vertical');
+        });
+
+        fileHorizontalInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            fileNameHorizontal.textContent = file.name;
+            document.querySelector('#uploadHorizontal .uploadBtn').classList.add('loaded');
+
+            await loadTextureFromFile(file, 'horizontal');
+        });
+
+
+        /**
+         * ============================================================================
+         * URL TEXTURE LOADING
+         * Allows loading textures from a direct URL (e.g., local server)
+         * ============================================================================
+         */
+
+        const urlVerticalInput = document.getElementById('urlVertical');
+        const urlHorizontalInput = document.getElementById('urlHorizontal');
+        const loadUrlVerticalBtn = document.getElementById('loadUrlVerticalBtn');
+        const loadUrlHorizontalBtn = document.getElementById('loadUrlHorizontalBtn');
+
+        // Default URL prefix for texture loading (fallback when just filename is provided)
+        const DEFAULT_TEXTURE_URL_PREFIX = 'http://localhost:8080/textures/';
+
+        /**
+         * Resolves a texture URL - adds default prefix if it's just a filename
+         */
+        function resolveTextureUrl(input) {
+            // If it's already a full URL, use as-is
+            if (input.startsWith('http://') || input.startsWith('https://') || input.startsWith('/')) {
+                return input;
+            }
+            // Otherwise, prepend the default prefix
+            return DEFAULT_TEXTURE_URL_PREFIX + input;
+        }
+
+        /**
+         * Loads a texture from a URL and updates the scene.
+         * Automatically adds default prefix if just a filename is provided.
+         */
+        function loadTextureFromUrl(input, type) {
+            const url = resolveTextureUrl(input);
+
+            return new Promise((resolve, reject) => {
+                const isHorizontal = type === 'horizontal';
+                const previewId = isHorizontal ? 'atlasPreviewHorizontal' : 'atlasPreviewVertical';
+
+                // Add timestamp to bypass cache
+                const urlWithCache = url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
+
+                loader.load(urlWithCache, (tex) => {
+                    // Store old rows to detect if we need a full rebuild
+                    const oldRows = config.rows;
+
+                    const newTexture = createUpscaledTexture(tex, previewId);
+
+                    // For single texture layouts, update both textures
+                    const isSingleTexture = layouts[currentLayout].singleTexture;
+
+                    if (isSingleTexture) {
+                        horizontalTexture = newTexture;
+                        verticalTexture = newTexture;
+                    } else if (isHorizontal) {
+                        horizontalTexture = newTexture;
+                    } else {
+                        verticalTexture = newTexture;
+                    }
+
+                    // If rows changed (autoDetectRows), we need to rebuild everything
+                    if (layouts[currentLayout].autoDetectRows && config.rows !== oldRows) {
+                        console.log(`Rows changed from ${oldRows} to ${config.rows}, rebuilding scene...`);
+                        clearPatterns();
+                        clearMaterialCache();
+                        buildPatterns();
+                        resolve();
+                        return;
+                    }
+
+                    // Update all cached materials
+                    materialCache.forEach((mats, tileIndex) => {
+                        const index = tileIndex - 1;
+                        const col = index % config.columns;
+                        const rowFromBottom = config.rows - 1 - Math.floor(index / config.columns);
+
+                        const repeatX = 1 / config.columns;
+                        const repeatY = 1 / config.rows;
+                        const offsetX = col / config.columns;
+                        const offsetY = rowFromBottom / config.rows;
+
+                        // For single texture mode, update both materials
+                        if (isSingleTexture || isHorizontal) {
+                            const newTex = horizontalTexture.clone();
+                            newTex.repeat.set(repeatX, repeatY);
+                            newTex.offset.set(offsetX, offsetY);
+                            newTex.needsUpdate = true;
+                            mats.horizontal.map = newTex;
+                            mats.horizontal.needsUpdate = true;
+                        }
+                        if (isSingleTexture || !isHorizontal) {
+                            const newTex = verticalTexture.clone();
+                            newTex.repeat.set(repeatX, repeatY);
+                            newTex.offset.set(offsetX, offsetY);
+                            newTex.needsUpdate = true;
+                            mats.vertical.map = newTex;
+                            mats.vertical.needsUpdate = true;
+                        }
+                    });
+
+                    resolve();
+                }, undefined, (err) => {
+                    console.error(`Failed to load texture from URL: ${url}`, err);
+                    reject(err);
+                });
+            });
+        }
+
+        // Load vertical texture from URL
+        loadUrlVerticalBtn.addEventListener('click', async () => {
+            const input = urlVerticalInput.value.trim();
+            if (!input) return;
+
+            try {
+                await loadTextureFromUrl(input, 'vertical');
+                // Update current URL for auto-reload
+                currentVerticalUrl = resolveTextureUrl(input);
+                fileNameVertical.textContent = 'URL loaded';
+                document.querySelector('#uploadVertical .uploadBtn').classList.add('loaded');
+                // Save input to localStorage per layout
+                localStorage.setItem(`urlVertical_${currentLayout}`, input);
+                // Save as custom URL for Current button
+                localStorage.setItem(`customUrlVertical_${currentLayout}`, input);
+                // Activate Current button and save preset
+                updatePresetButtons('current');
+                localStorage.setItem('texturePreset', 'current');
+            } catch (err) {
+                fileNameVertical.textContent = 'Error!';
+            }
+        });
+
+        // Load horizontal texture from URL
+        loadUrlHorizontalBtn.addEventListener('click', async () => {
+            const input = urlHorizontalInput.value.trim();
+            if (!input) return;
+
+            try {
+                await loadTextureFromUrl(input, 'horizontal');
+                // Update current URL for auto-reload
+                currentHorizontalUrl = resolveTextureUrl(input);
+                fileNameHorizontal.textContent = 'URL loaded';
+                document.querySelector('#uploadHorizontal .uploadBtn').classList.add('loaded');
+                // Save input to localStorage per layout
+                localStorage.setItem(`urlHorizontal_${currentLayout}`, input);
+                // Save as custom URL for Current button
+                localStorage.setItem(`customUrlHorizontal_${currentLayout}`, input);
+                // Activate Current button and save preset
+                updatePresetButtons('current');
+                localStorage.setItem('texturePreset', 'current');
+            } catch (err) {
+                fileNameHorizontal.textContent = 'Error!';
+            }
+        });
+
+        // Allow Enter key to trigger URL load
+        urlVerticalInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') loadUrlVerticalBtn.click();
+        });
+
+        urlHorizontalInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') loadUrlHorizontalBtn.click();
+        });
+
+
+        /**
+         * ============================================================================
+         * INITIALIZATION
+         * ============================================================================
+         */
+
+        const layoutSelect = document.getElementById('layoutSelect');
+
+        // Restore saved layout
+        const savedLayout = localStorage.getItem('selectedLayout');
+        if (savedLayout && layouts[savedLayout]) {
+            currentLayout = savedLayout;
+            layoutSelect.value = savedLayout;
+            document.getElementById('layoutDescription').textContent = layouts[savedLayout].description;
+        }
+
+        // Update UI visibility based on singleTexture mode
+        function updateSingleTextureUI() {
+            const isSingleTexture = layouts[currentLayout].singleTexture;
+            document.getElementById('atlasPreviewHorizontal').style.display = isSingleTexture ? 'none' : 'block';
+            document.getElementById('labelHorizontal').style.display = isSingleTexture ? 'none' : 'block';
+            document.getElementById('uploadHorizontal').style.display = isSingleTexture ? 'none' : 'flex';
+            document.getElementById('labelVertical').textContent = isSingleTexture ? 'Texture' : 'Vertical (sides)';
+        }
+        updateSingleTextureUI();
+
+        // Restore saved URLs for current layout
+        function restoreLayoutUrls() {
+            const isSingleTexture = layouts[currentLayout].singleTexture;
+            const savedUrlVertical = localStorage.getItem(`urlVertical_${currentLayout}`);
+            const savedUrlHorizontal = localStorage.getItem(`urlHorizontal_${currentLayout}`);
+
+            // Use saved URL or default texture from layout definition
+            const defaultVertical = layouts[currentLayout].verticalTexture;
+            const defaultHorizontal = layouts[currentLayout].horizontalTexture;
+
+            urlVerticalInput.value = savedUrlVertical || defaultVertical;
+            urlHorizontalInput.value = isSingleTexture ? '' : (savedUrlHorizontal || defaultHorizontal);
+
+            // Update current URLs for auto-reload
+            currentVerticalUrl = savedUrlVertical ? resolveTextureUrl(savedUrlVertical) : null;
+            currentHorizontalUrl = (!isSingleTexture && savedUrlHorizontal) ? resolveTextureUrl(savedUrlHorizontal) : null;
+
+            // Update UI state
+            fileNameVertical.textContent = savedUrlVertical ? 'URL saved' : 'default';
+            fileNameHorizontal.textContent = isSingleTexture ? '' : (savedUrlHorizontal ? 'URL saved' : 'default');
+
+            const verticalBtn = document.querySelector('#uploadVertical .uploadBtn');
+            const horizontalBtn = document.querySelector('#uploadHorizontal .uploadBtn');
+            verticalBtn.classList.toggle('loaded', !!savedUrlVertical);
+            horizontalBtn.classList.toggle('loaded', !isSingleTexture && !!savedUrlHorizontal);
+
+            // Update vertical button label for single texture mode
+            verticalBtn.textContent = isSingleTexture ? 'Load Texture' : 'Load Vertical';
+            
+            // Update Current button visibility based on whether custom URLs exist for this layout
+            const hasCustomUrl = localStorage.getItem(`customUrlVertical_${currentLayout}`);
+            const currentBtn = document.getElementById('presetCurrent');
+            if (currentBtn) {
+                currentBtn.style.display = hasCustomUrl ? 'inline-block' : 'none';
+            }
+        }
+        restoreLayoutUrls();
+
+        // Layout change handler
+        layoutSelect.addEventListener('change', (e) => {
+            switchLayout(e.target.value);
+            restoreLayoutUrls();
+        });
+
+        // Restore auto-reload state
+        if (localStorage.getItem('autoReload') === 'true') {
+            autoReloadCheckbox.checked = true;
+            toggleAutoReload(true);
+        }
+
+
+        /**
+         * ============================================================================
+         * TEXTURE PRESETS
+         * Quick switch between numbered and example textures
+         * ============================================================================
+         */
+
+        const presetNumberedBtn = document.getElementById('presetNumbered');
+        const presetExampleBtn = document.getElementById('presetExample');
+        const presetCurrentBtn = document.getElementById('presetCurrent');
+
+        // Texture presets for each layout
+        const texturePresets = {
+            numbered: {
+                full: { vertical: 'textures/full_vertical.png', horizontal: 'textures/full_horizontal.png' },
+                simple: { vertical: 'textures/simple_vertical.png', horizontal: 'textures/simple_horizontal.png' },
+                compact: { vertical: 'textures/compact_vertical.png', horizontal: 'textures/compact_horizontal.png' },
+                horizontal: { vertical: 'textures/horizontal.png', horizontal: 'textures/horizontal.png' },
+                vertical: { vertical: 'textures/vertical.png', horizontal: 'textures/vertical.png' }
+            },
+            example: {
+                full: { vertical: 'textures/full_vertical_ex.png', horizontal: 'textures/full_horizontal_ex.png' },
+                simple: { vertical: 'textures/simple_vertical_ex.png', horizontal: 'textures/simple_horizontal_ex.png' },
+                compact: { vertical: 'textures/compact_vertical_ex.png', horizontal: 'textures/compact_horizontal_ex.png' },
+                horizontal: { vertical: 'textures/horizontal_ex.png', horizontal: 'textures/horizontal_ex.png' },
+                vertical: { vertical: 'textures/vertical_ex.png', horizontal: 'textures/vertical_ex.png' }
+            }
+        };
+
+        function applyTexturePreset(presetType) {
+            // Handle 'current' preset - load from custom saved URLs
+            if (presetType === 'current') {
+                const customVertical = localStorage.getItem(`customUrlVertical_${currentLayout}`);
+                const customHorizontal = localStorage.getItem(`customUrlHorizontal_${currentLayout}`);
+                
+                if (!customVertical) {
+                    console.warn('No custom texture saved for this layout');
+                    return;
+                }
+                
+                const isSingleTexture = layouts[currentLayout].singleTexture;
+                
+                // For dual-texture layouts, use default horizontal if no custom horizontal
+                // Note: customHorizontal needs resolveTextureUrl(), but layout defaults are already relative paths
+                const hasCustomHorizontal = !!customHorizontal;
+                const effectiveHorizontal = customHorizontal || layouts[currentLayout].horizontalTexture;
+                
+                // Update URL inputs
+                urlVerticalInput.value = customVertical;
+                if (!isSingleTexture) {
+                    urlHorizontalInput.value = effectiveHorizontal;
+                }
+                
+                // Update current URLs for auto-reload
+                // Only use resolveTextureUrl() for custom URLs, not for layout defaults (they're already relative paths)
+                currentVerticalUrl = resolveTextureUrl(customVertical);
+                if (isSingleTexture) {
+                    currentHorizontalUrl = null;
+                } else if (hasCustomHorizontal) {
+                    currentHorizontalUrl = resolveTextureUrl(customHorizontal);
+                } else {
+                    // Use the layout default directly (it's a relative path like 'textures/full_horizontal.png')
+                    currentHorizontalUrl = layouts[currentLayout].horizontalTexture;
+                }
+                
+                // Update button states
+                updatePresetButtons('current');
+                
+                // Save preset choice
+                localStorage.setItem('texturePreset', 'current');
+                
+                // Reload textures
+                clearPatterns();
+                clearMaterialCache();
+                
+                let loaded = 0;
+                const targetLoads = isSingleTexture ? 1 : 2;
+                
+                const onLoad = () => {
+                    loaded++;
+                    if (loaded === targetLoads) {
+                        buildPatterns();
+                    }
+                };
+                
+                const onError = (err) => {
+                    console.error('Failed to load custom texture:', err);
+                    onLoad(); // Continue anyway to avoid getting stuck
+                };
+                
+                if (isSingleTexture) {
+                    loader.load(currentVerticalUrl + '?t=' + Date.now(), (tex) => {
+                        horizontalTexture = createUpscaledTexture(tex, 'atlasPreviewVertical');
+                        verticalTexture = horizontalTexture;
+                        onLoad();
+                    }, undefined, onError);
+                } else {
+                    loader.load(currentHorizontalUrl + '?t=' + Date.now(), (tex) => {
+                        horizontalTexture = createUpscaledTexture(tex, 'atlasPreviewHorizontal');
+                        onLoad();
+                    }, undefined, onError);
+                    loader.load(currentVerticalUrl + '?t=' + Date.now(), (tex) => {
+                        verticalTexture = createUpscaledTexture(tex, 'atlasPreviewVertical');
+                        onLoad();
+                    }, undefined, onError);
+                }
+                
+                // Update UI
+                fileNameVertical.textContent = 'custom';
+                fileNameHorizontal.textContent = isSingleTexture ? '' : (customHorizontal ? 'custom' : 'default');
+                return;
+            }
+            
+            const preset = texturePresets[presetType][currentLayout];
+            if (!preset) return;
+
+            // Update URL inputs
+            urlVerticalInput.value = preset.vertical;
+            if (!layouts[currentLayout].singleTexture) {
+                urlHorizontalInput.value = preset.horizontal;
+            }
+
+            // Update current URLs for auto-reload
+            currentVerticalUrl = resolveTextureUrl(preset.vertical);
+            currentHorizontalUrl = layouts[currentLayout].singleTexture ? null : resolveTextureUrl(preset.horizontal);
+
+            // Update button states
+            updatePresetButtons(presetType);
+
+            // Save preset choice
+            localStorage.setItem('texturePreset', presetType);
+
+            // Reload textures
+            clearPatterns();
+            clearMaterialCache();
+
+            const isSingleTexture = layouts[currentLayout].singleTexture;
+            let loaded = 0;
+            const targetLoads = isSingleTexture ? 1 : 2;
+
+            const onLoad = () => {
+                loaded++;
+                if (loaded === targetLoads) {
+                    buildPatterns();
+                }
+            };
+
+            if (isSingleTexture) {
+                loader.load(preset.vertical + '?t=' + Date.now(), (tex) => {
+                    horizontalTexture = createUpscaledTexture(tex, 'atlasPreviewVertical');
+                    verticalTexture = horizontalTexture;
+                    onLoad();
+                });
+            } else {
+                loader.load(preset.horizontal + '?t=' + Date.now(), (tex) => {
+                    horizontalTexture = createUpscaledTexture(tex, 'atlasPreviewHorizontal');
+                    onLoad();
+                });
+                loader.load(preset.vertical + '?t=' + Date.now(), (tex) => {
+                    verticalTexture = createUpscaledTexture(tex, 'atlasPreviewVertical');
+                    onLoad();
+                });
+            }
+
+            // Update UI
+            fileNameVertical.textContent = presetType;
+            fileNameHorizontal.textContent = isSingleTexture ? '' : presetType;
+        }
+
+        // Helper function to update preset button states
+        function updatePresetButtons(activePreset) {
+            presetCurrentBtn.classList.toggle('active', activePreset === 'current');
+            presetNumberedBtn.classList.toggle('active', activePreset === 'numbered');
+            presetExampleBtn.classList.toggle('active', activePreset === 'example');
+            
+            // Show/hide Current button based on whether custom URLs exist
+            const hasCustomUrl = localStorage.getItem(`customUrlVertical_${currentLayout}`);
+            presetCurrentBtn.style.display = hasCustomUrl ? 'inline-block' : 'none';
+        }
+
+        presetCurrentBtn.addEventListener('click', () => applyTexturePreset('current'));
+        presetNumberedBtn.addEventListener('click', () => applyTexturePreset('numbered'));
+        presetExampleBtn.addEventListener('click', () => applyTexturePreset('example'));
+
+        // Restore preset state
+        const savedPreset = localStorage.getItem('texturePreset');
+        if (savedPreset) {
+            updatePresetButtons(savedPreset);
+        } else {
+            // Hide Current button if no custom URLs exist
+            const hasCustomUrl = localStorage.getItem(`customUrlVertical_${currentLayout}`);
+            presetCurrentBtn.style.display = hasCustomUrl ? 'inline-block' : 'none';
+        }
+
+
+        // Initial load
+        loadTextures(() => {
+            buildPatterns();
+            // Ensure positions are correct after first load
+            setTimeout(updatePreviewPositions, 100);
+        });
+    </script>
+</body>
+
+</html>
