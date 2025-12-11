@@ -2,6 +2,12 @@
 
 A 3D visualizer for [Fusion](https://github.com/SuperMartijn642/Fusion) connected textures in Minecraft. Preview how your texture will look when applied to blocks with various neighbor configurations.
 
+## Preview
+
+![Preview Image](git/img/preview-1.png)
+![Preview Image](git/img/preview-2.png)
+![Preview Image](git/img/preview-3.png)
+
 ## Getting Started
 
 ### Start the server
