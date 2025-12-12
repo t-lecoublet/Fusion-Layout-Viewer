@@ -1,4 +1,6 @@
-# Fusion Full Layout Viewer
+# Fusion Layouts Viewer (Full, Simple, Compact, Horizontal, Vertical)
+
+> This project is independent and is not affiliated with SuperMartijn642 or the Fusion project.
 
 A 3D visualizer for [Fusion](https://github.com/SuperMartijn642/Fusion) connected textures in Minecraft. Preview how your texture will look when applied to blocks with various neighbor configurations.
 
