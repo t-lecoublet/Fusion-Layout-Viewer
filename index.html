@@ -5,7 +5,7 @@
     <meta charset="UTF-8" />
     <title>Fusion Layout Viewer</title>
     <link rel="icon" type="image/png"
-        href="https://media.forgecdn.net/avatars/thumbnails/835/860/64/64/638227854854712053.png" />
+        href="git/img/logo.svg" />
     <style>
         body {
             margin: 0;
@@ -24,7 +24,12 @@
             border-radius: 6px;
             font-size: 13px;
             z-index: 10;
-            max-width: 520px;
+            max-width: 128px;
+        }
+
+        #info i {
+            font-size: 11px;
+            color: #aaa;
         }
 
         #layoutSelector {
@@ -279,35 +284,10 @@
 <body>
 
     <div id="info">
-        <!-- <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-                <path id="semi" d="M -110,0
-             A 110,110 0 0 1 110,0
-             L 110,110
-             L -110,110 Z" />
-                <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
-                    <feDropShadow dx="0" dy="8" stdDeviation="10" flood-opacity="0.35" />
-                </filter>
-                <pattern id="texturePattern" patternUnits="userSpaceOnUse" width="20" height="20">
-                    <rect x="0" y="0" width="20" height="20" fill="#c47bff" />
-                    <rect x="0" y="0" width="10" height="10" fill="#d593ff" />
-                    <rect x="10" y="10" width="10" height="10" fill="#d593ff" />
-                </pattern>
-            </defs>
-            <g transform="translate(256 256) skewX(-10)">
-                <use href="#semi" fill="#64ff3a" filter="url(#shadow)" transform="translate(-90,-90) rotate(-20)" />
-
-                <use href="#semi" fill="#ff9a2a" filter="url(#shadow)" transform="translate(90,-90) rotate(70)" />
-
-                <use href="#semi" fill="#2ab9ff" filter="url(#shadow)" transform="translate(-90,90) rotate(-110)" />
-
-                <use href="#semi" fill="url(#texturePattern)" filter="url(#shadow)"
-                    transform="translate(90,90) rotate(160)" />
-            </g>
-        </svg> -->
-        <img src="https://media.forgecdn.net/avatars/thumbnails/835/860/64/64/638227854854712053.png" alt="Fusion Logo"
-            style="height: 64px;" />
+        <img src="git/img/logo.svg" alt="Fusion Logo"
+            style="height: 32px;" />
         <br />Fusion Layout Viewer<br />
+        <i>Not affiliated with SuperMartijn642</i><br />
         <a href="https://github.com/SuperMartijn642/Fusion/wiki/Texture-Types" target="_blank"
             style="color: #8af;">Documentation</a>
     </div>
@@ -334,7 +314,7 @@
     <canvas id="atlasPreviewVertical" class="atlasPreview"></canvas>
 
     <div id="uploadVertical" class="textureUpload">
-        <button class="uploadBtn" onclick="document.getElementById('fileVertical').click()">
+        <button class="uploadBtn" id="uploadVerticalBtn">
             Load Vertical
         </button>
         <input type="file" id="fileVertical" accept="image/png" style="display: none" />
@@ -349,7 +329,7 @@
     <canvas id="atlasPreviewHorizontal" class="atlasPreview"></canvas>
 
     <div id="uploadHorizontal" class="textureUpload">
-        <button class="uploadBtn" onclick="document.getElementById('fileHorizontal').click()">
+        <button class="uploadBtn" id="uploadHorizontalBtn">
             Load Horizontal
         </button>
         <input type="file" id="fileHorizontal" accept="image/png" style="display: none" />
@@ -369,6 +349,72 @@
     <script type="module">
         import * as THREE from 'three';
         import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js';
+
+
+        /**
+         * ============================================================================
+         * CONSTANTS
+         * ============================================================================
+         */
+
+        // Face indices for Three.js BoxGeometry
+        const FACE = {
+            POS_X: 0,  // +X (right)
+            NEG_X: 1,  // -X (left)
+            POS_Y: 2,  // +Y (top) - horizontal face
+            NEG_Y: 3,  // -Y (bottom) - horizontal face
+            POS_Z: 4,  // +Z (front)
+            NEG_Z: 5   // -Z (back)
+        };
+
+        // Shared CSV pattern for full and simple layouts (same demo, different tile selection)
+        const DEMO_CSV_FULL = `
+1,,10,12,,2,3,4,,9,,5,4,,2,6,,,9,,9,,,2,8,4,,,9,,,,9,,10,12,,10,11,12,,5,3,6,,10,11,12,,10,12,,9,,,,9,,10,24,4,,,10,12,,10,11,12,,,9,,,,10,12,,10,12,,,,9,,,10,11,12,,10,12,,,,10,12,,10,11,12,,10,12,,,,10,12,,10,12,,,,9,,,,9,,,,10,12,,9,,2,4
+,,26,28,,,,,,17,,25,,,,25,,2,14,,13,4,,,25,,,2,15,4,,10,30,,21,28,,26,27,28,,17,,17,,18,19,20,,18,20,,7,4,,2,16,,26,28,,,2,31,28,,26,43,28,,10,36,12,,2,35,20,,19,44,4,,2,34,4,,26,40,20,,18,47,12,,10,48,20,,18,39,28,,26,41,12,,10,33,28,,26,46,4,,2,37,12,,10,38,4,,2,45,28,,25,,,
+,,,,,,,,,25,,,,,,,,,,,,,,,,,,,,,,26,28,,25,,,,,,,13,3,14,,26,27,28,,26,28,,25,,,,25,,,,,,,,,,,25,,,26,27,28,,,26,28,,26,28,,,,25,,,,26,28,,26,27,28,,26,27,28,,26,28,,,,26,28,,26,28,,,,25,,,,26,28,,26,28,,,,25
+`.trim();
+
+        // DOM element cache (initialized after DOMContentLoaded is implicit in module scripts)
+        const DOM = {
+            // Layout UI
+            layoutSelect: document.getElementById('layoutSelect'),
+            layoutDescription: document.getElementById('layoutDescription'),
+            
+            // Atlas previews
+            atlasPreviewVertical: document.getElementById('atlasPreviewVertical'),
+            atlasPreviewHorizontal: document.getElementById('atlasPreviewHorizontal'),
+            
+            // Labels
+            labelVertical: document.getElementById('labelVertical'),
+            labelHorizontal: document.getElementById('labelHorizontal'),
+            
+            // Upload containers
+            uploadVertical: document.getElementById('uploadVertical'),
+            uploadHorizontal: document.getElementById('uploadHorizontal'),
+            uploadVerticalBtn: document.getElementById('uploadVerticalBtn'),
+            uploadHorizontalBtn: document.getElementById('uploadHorizontalBtn'),
+            
+            // File inputs
+            fileVertical: document.getElementById('fileVertical'),
+            fileHorizontal: document.getElementById('fileHorizontal'),
+            fileNameVertical: document.getElementById('fileNameVertical'),
+            fileNameHorizontal: document.getElementById('fileNameHorizontal'),
+            
+            // URL inputs
+            urlVertical: document.getElementById('urlVertical'),
+            urlHorizontal: document.getElementById('urlHorizontal'),
+            loadUrlVerticalBtn: document.getElementById('loadUrlVerticalBtn'),
+            loadUrlHorizontalBtn: document.getElementById('loadUrlHorizontalBtn'),
+            
+            // Auto-reload
+            autoReload: document.getElementById('autoReload'),
+            reloadStatus: document.getElementById('reloadStatus'),
+            
+            // Preset buttons
+            presetCurrent: document.getElementById('presetCurrent'),
+            presetNumbered: document.getElementById('presetNumbered'),
+            presetExample: document.getElementById('presetExample')
+        };
 
 
         /**
@@ -422,11 +468,7 @@
                 spacingX: 24,
                 spacingZ: 24,
                 // CSV patterns to demonstrate all tile types
-                csv: `
-1,,10,12,,2,3,4,,9,,5,4,,2,6,,,9,,9,,,2,8,4,,,9,,,,9,,10,12,,10,11,12,,5,3,6,,10,11,12,,10,12,,9,,,,9,,10,24,4,,,10,12,,10,11,12,,,9,,,,10,12,,10,12,,,,9,,,10,11,12,,10,12,,,,10,12,,10,11,12,,10,12,,,,10,12,,10,12,,,,9,,,,9,,,,10,12,,9,,2,4
-,,26,28,,,,,,17,,25,,,,25,,2,14,,13,4,,,25,,,2,15,4,,10,30,,21,28,,26,27,28,,17,,17,,18,19,20,,18,20,,7,4,,2,16,,26,28,,,2,31,28,,26,43,28,,10,36,12,,2,35,20,,19,44,4,,2,34,4,,26,40,20,,18,47,12,,10,48,20,,18,39,28,,26,41,12,,10,33,28,,26,46,4,,2,37,12,,10,38,4,,2,45,28,,25,,,
-,,,,,,,,,25,,,,,,,,,,,,,,,,,,,,,,26,28,,25,,,,,,,13,3,14,,26,27,28,,26,28,,25,,,,25,,,,,,,,,,,25,,,26,27,28,,,26,28,,26,28,,,,25,,,,26,28,,26,27,28,,26,27,28,,26,28,,,,26,28,,26,28,,,,25,,,,26,28,,26,28,,,,25
-`.trim(),
+                csv: DEMO_CSV_FULL,
                 findTilePosition: findFullTilePosition
             },
 
@@ -441,11 +483,7 @@
                 spacingX: 24,
                 spacingZ: 24,
                 // Same patterns as full, but simpler tile selection
-                csv: `
-1,,10,12,,2,3,4,,9,,5,4,,2,6,,,9,,9,,,2,8,4,,,9,,,,9,,10,12,,10,11,12,,5,3,6,,10,11,12,,10,12,,9,,,,9,,10,24,4,,,10,12,,10,11,12,,,9,,,,10,12,,10,12,,,,9,,,10,11,12,,10,12,,,,10,12,,10,11,12,,10,12,,,,10,12,,10,12,,,,9,,,,9,,,,10,12,,9,,2,4
-,,26,28,,,,,,17,,25,,,,25,,2,14,,13,4,,,25,,,2,15,4,,10,30,,21,28,,26,27,28,,17,,17,,18,19,20,,18,20,,7,4,,2,16,,26,28,,,2,31,28,,26,43,28,,10,36,12,,2,35,20,,19,44,4,,2,34,4,,26,40,20,,18,47,12,,10,48,20,,18,39,28,,26,41,12,,10,33,28,,26,46,4,,2,37,12,,10,38,4,,2,45,28,,25,,,
-,,,,,,,,,25,,,,,,,,,,,,,,,,,,,,,,26,28,,25,,,,,,,13,3,14,,26,27,28,,26,28,,25,,,,25,,,,,,,,,,,25,,,26,27,28,,,26,28,,26,28,,,,25,,,,26,28,,26,27,28,,26,27,28,,26,28,,,,26,28,,26,28,,,,25,,,,26,28,,26,28,,,,25
-`.trim(),
+                csv: DEMO_CSV_FULL,  // Reuse full layout CSV
                 findTilePosition: findSimpleTilePosition
             },
 
@@ -934,15 +972,13 @@
          * Called after drawing atlas preview to handle non-square textures.
          */
         function updatePreviewPositions() {
-            const verticalCanvas = document.getElementById('atlasPreviewVertical');
-            const verticalHeight = verticalCanvas.offsetHeight || 256;
-
+            const verticalHeight = DOM.atlasPreviewVertical.offsetHeight || 256;
             const horizontalTop = 10 + verticalHeight + 20; // 10px margin + canvas + 20px gap
 
-            document.getElementById('atlasPreviewHorizontal').style.top = horizontalTop + 'px';
-            document.getElementById('labelHorizontal').style.top = horizontalTop + 'px';
-            document.getElementById('labelHorizontal').style.transform = 'translateY(-18px)';
-            document.getElementById('uploadHorizontal').style.top = horizontalTop + 'px';
+            DOM.atlasPreviewHorizontal.style.top = horizontalTop + 'px';
+            DOM.labelHorizontal.style.top = horizontalTop + 'px';
+            DOM.labelHorizontal.style.transform = 'translateY(-18px)';
+            DOM.uploadHorizontal.style.top = horizontalTop + 'px';
         }
 
         /**
@@ -1000,6 +1036,66 @@
         let materialCache = new Map();
 
         /**
+         * Calculates UV coordinates for a given tile index.
+         * @param {number} tileIndex - 1-based tile index
+         * @returns {Object} UV configuration { repeatX, repeatY, offsetX, offsetY }
+         */
+        function calculateTileUVs(tileIndex) {
+            const index = tileIndex - 1;
+            const column = index % config.columns;
+            const rowFromTop = Math.floor(index / config.columns);
+            const rowFromBottom = config.rows - 1 - rowFromTop;
+
+            return {
+                repeatX: 1 / config.columns,
+                repeatY: 1 / config.rows,
+                offsetX: column / config.columns,
+                offsetY: rowFromBottom / config.rows
+            };
+        }
+
+        /**
+         * Configures a texture with the given UV parameters.
+         * @param {THREE.Texture} texture - Source texture to clone and configure
+         * @param {Object} uv - UV configuration from calculateTileUVs
+         * @returns {THREE.Texture} Configured texture clone
+         */
+        function configureTexture(texture, uv) {
+            const tex = texture.clone();
+            tex.repeat.set(uv.repeatX, uv.repeatY);
+            tex.offset.set(uv.offsetX, uv.offsetY);
+            tex.needsUpdate = true;
+            return tex;
+        }
+
+        /**
+         * Updates all cached materials with new textures.
+         * @param {string} type - 'horizontal', 'vertical', or 'both'
+         */
+        function updateCachedMaterials(type) {
+            const isSingleTexture = layouts[currentLayout].singleTexture;
+            const updateHorizontal = isSingleTexture || type === 'horizontal' || type === 'both';
+            const updateVertical = isSingleTexture || type === 'vertical' || type === 'both';
+
+            materialCache.forEach((mats, tileIndex) => {
+                const uv = calculateTileUVs(tileIndex);
+
+                if (updateHorizontal) {
+                    const newTex = configureTexture(horizontalTexture, uv);
+                    if (mats.horizontal.map) mats.horizontal.map.dispose();
+                    mats.horizontal.map = newTex;
+                    mats.horizontal.needsUpdate = true;
+                }
+                if (updateVertical) {
+                    const newTex = configureTexture(verticalTexture, uv);
+                    if (mats.vertical.map) mats.vertical.map.dispose();
+                    mats.vertical.map = newTex;
+                    mats.vertical.needsUpdate = true;
+                }
+            });
+        }
+
+        /**
          * Gets or creates materials for a given tile.
          */
         function getMaterialsForTile(tileIndex) {
@@ -1007,29 +1103,11 @@
                 return materialCache.get(tileIndex);
             }
 
-            const index = tileIndex - 1;
-            const column = index % config.columns;
-            const rowFromTop = Math.floor(index / config.columns);
-            const rowFromBottom = config.rows - 1 - rowFromTop;
-
-            const repeatX = 1 / config.columns;
-            const repeatY = 1 / config.rows;
-            const offsetX = column / config.columns;
-            const offsetY = rowFromBottom / config.rows;
-
-            const texH = horizontalTexture.clone();
-            texH.repeat.set(repeatX, repeatY);
-            texH.offset.set(offsetX, offsetY);
-            texH.needsUpdate = true;
-
-            const texV = verticalTexture.clone();
-            texV.repeat.set(repeatX, repeatY);
-            texV.offset.set(offsetX, offsetY);
-            texV.needsUpdate = true;
+            const uv = calculateTileUVs(tileIndex);
 
             const materials = {
-                horizontal: new THREE.MeshBasicMaterial({ map: texH }),
-                vertical: new THREE.MeshBasicMaterial({ map: texV })
+                horizontal: new THREE.MeshBasicMaterial({ map: configureTexture(horizontalTexture, uv) }),
+                vertical: new THREE.MeshBasicMaterial({ map: configureTexture(verticalTexture, uv) })
             };
 
             materialCache.set(tileIndex, materials);
@@ -1041,6 +1119,8 @@
          */
         function clearMaterialCache() {
             materialCache.forEach((mats) => {
+                if (mats.horizontal.map) mats.horizontal.map.dispose();
+                if (mats.vertical.map) mats.vertical.map.dispose();
                 mats.horizontal.dispose();
                 mats.vertical.dispose();
             });
@@ -1055,12 +1135,12 @@
          */
 
         const faceOrientations = [
-            { up: [0, 1, 0], right: [0, 0, -1] },   // +X
-            { up: [0, 1, 0], right: [0, 0, 1] },    // -X
-            { up: [0, 0, -1], right: [1, 0, 0] },   // +Y
-            { up: [0, 0, 1], right: [1, 0, 0] },    // -Y
-            { up: [0, 1, 0], right: [1, 0, 0] },    // +Z
-            { up: [0, 1, 0], right: [-1, 0, 0] }    // -Z
+            { up: [0, 1, 0], right: [0, 0, -1] },   // FACE.POS_X (+X, right)
+            { up: [0, 1, 0], right: [0, 0, 1] },    // FACE.NEG_X (-X, left)
+            { up: [0, 0, -1], right: [1, 0, 0] },   // FACE.POS_Y (+Y, top) - horizontal
+            { up: [0, 0, 1], right: [1, 0, 0] },    // FACE.NEG_Y (-Y, bottom) - horizontal
+            { up: [0, 1, 0], right: [1, 0, 0] },    // FACE.POS_Z (+Z, front)
+            { up: [0, 1, 0], right: [-1, 0, 0] }    // FACE.NEG_Z (-Z, back)
         ];
 
         function positionToIndex(position) {
@@ -1105,7 +1185,8 @@
                 const tileIndex = positionToIndex(tilePosition);
                 const mats = getMaterialsForTile(tileIndex);
 
-                const isHorizontalFace = (faceIndex === 2 || faceIndex === 3);
+                // Use FACE constants for clarity: POS_Y (top) and NEG_Y (bottom) are horizontal faces
+                const isHorizontalFace = (faceIndex === FACE.POS_Y || faceIndex === FACE.NEG_Y);
                 materials[faceIndex] = isHorizontalFace ? mats.horizontal : mats.vertical;
             }
 
@@ -1244,16 +1325,16 @@
             localStorage.setItem('selectedLayout', layoutName);
 
             // Update description
-            document.getElementById('layoutDescription').textContent = layouts[layoutName].description;
+            DOM.layoutDescription.textContent = layouts[layoutName].description;
 
             // Show/hide second texture UI based on singleTexture mode
             const isSingleTexture = layouts[layoutName].singleTexture;
-            document.getElementById('atlasPreviewHorizontal').style.display = isSingleTexture ? 'none' : 'block';
-            document.getElementById('labelHorizontal').style.display = isSingleTexture ? 'none' : 'block';
-            document.getElementById('uploadHorizontal').style.display = isSingleTexture ? 'none' : 'flex';
+            DOM.atlasPreviewHorizontal.style.display = isSingleTexture ? 'none' : 'block';
+            DOM.labelHorizontal.style.display = isSingleTexture ? 'none' : 'block';
+            DOM.uploadHorizontal.style.display = isSingleTexture ? 'none' : 'flex';
 
             // Update label for single texture mode
-            document.getElementById('labelVertical').textContent = isSingleTexture ? 'Texture' : 'Vertical (sides)';
+            DOM.labelVertical.textContent = isSingleTexture ? 'Texture' : 'Vertical (sides)';
 
             // Clear existing scene
             clearPatterns();
@@ -1295,8 +1376,9 @@
         let reloadIntervalId = null;
         let lastModified = { horizontal: null, vertical: null };
 
-        const autoReloadCheckbox = document.getElementById('autoReload');
-        const reloadStatus = document.getElementById('reloadStatus');
+        // Use DOM cache aliases for readability
+        const autoReloadCheckbox = DOM.autoReload;
+        const reloadStatus = DOM.reloadStatus;
 
         async function checkForChanges() {
             try {
@@ -1355,32 +1437,8 @@
                         verticalTexture = newTexture;
                     }
 
-                    materialCache.forEach((mats, tileIndex) => {
-                        const index = tileIndex - 1;
-                        const col = index % config.columns;
-                        const rowFromBottom = config.rows - 1 - Math.floor(index / config.columns);
-
-                        const repeatX = 1 / config.columns;
-                        const repeatY = 1 / config.rows;
-                        const offsetX = col / config.columns;
-                        const offsetY = rowFromBottom / config.rows;
-
-                        if (isHorizontal) {
-                            const newTex = horizontalTexture.clone();
-                            newTex.repeat.set(repeatX, repeatY);
-                            newTex.offset.set(offsetX, offsetY);
-                            newTex.needsUpdate = true;
-                            mats.horizontal.map = newTex;
-                            mats.horizontal.needsUpdate = true;
-                        } else {
-                            const newTex = verticalTexture.clone();
-                            newTex.repeat.set(repeatX, repeatY);
-                            newTex.offset.set(offsetX, offsetY);
-                            newTex.needsUpdate = true;
-                            mats.vertical.map = newTex;
-                            mats.vertical.needsUpdate = true;
-                        }
-                    });
+                    // Use refactored utility function
+                    updateCachedMaterials(type);
 
                     resolve();
                 });
@@ -1418,89 +1476,69 @@
          * ============================================================================
          */
 
-        const fileVerticalInput = document.getElementById('fileVertical');
-        const fileHorizontalInput = document.getElementById('fileHorizontal');
-        const fileNameVertical = document.getElementById('fileNameVertical');
-        const fileNameHorizontal = document.getElementById('fileNameHorizontal');
+        // Use DOM cache aliases for readability
+        const fileVerticalInput = DOM.fileVertical;
+        const fileHorizontalInput = DOM.fileHorizontal;
+        const fileNameVertical = DOM.fileNameVertical;
+        const fileNameHorizontal = DOM.fileNameHorizontal;
+
+        /**
+         * Core function to apply a loaded texture image to the scene.
+         * Handles texture assignment, row detection, and material updates.
+         * @param {HTMLImageElement} image - The loaded image
+         * @param {string} type - 'horizontal' or 'vertical'
+         * @returns {boolean} true if scene was rebuilt due to row change
+         */
+        function applyLoadedTexture(image, type) {
+            const isHorizontal = type === 'horizontal';
+            const previewId = isHorizontal ? 'atlasPreviewHorizontal' : 'atlasPreviewVertical';
+            const isSingleTexture = layouts[currentLayout].singleTexture;
+
+            // Store old rows to detect if we need a full rebuild
+            const oldRows = config.rows;
+
+            // Create texture from image
+            const fakeTexture = { image };
+            const newTexture = createUpscaledTexture(fakeTexture, previewId);
+
+            // Assign texture(s)
+            if (isSingleTexture) {
+                horizontalTexture = newTexture;
+                verticalTexture = newTexture;
+            } else if (isHorizontal) {
+                horizontalTexture = newTexture;
+            } else {
+                verticalTexture = newTexture;
+            }
+
+            // If rows changed (autoDetectRows), we need to rebuild everything
+            if (layouts[currentLayout].autoDetectRows && config.rows !== oldRows) {
+                console.log(`Rows changed from ${oldRows} to ${config.rows}, rebuilding scene...`);
+                clearPatterns();
+                clearMaterialCache();
+                buildPatterns();
+                return true;
+            }
+
+            // Update all cached materials using the utility function
+            updateCachedMaterials(isSingleTexture ? 'both' : type);
+            return false;
+        }
 
         /**
          * Loads a texture from a File object and updates the scene.
-         * For layouts with autoDetectRows, this may trigger a full rebuild if rows change.
          */
         function loadTextureFromFile(file, type) {
             return new Promise((resolve) => {
                 const reader = new FileReader();
-
                 reader.onload = (e) => {
                     const img = new Image();
                     img.onload = () => {
-                        // Create a fake texture object to pass to createUpscaledTexture
-                        const fakeTexture = { image: img };
-                        const isHorizontal = type === 'horizontal';
-                        const previewId = isHorizontal ? 'atlasPreviewHorizontal' : 'atlasPreviewVertical';
-
-                        // Store old rows to detect if we need a full rebuild
-                        const oldRows = config.rows;
-
-                        const newTexture = createUpscaledTexture(fakeTexture, previewId);
-
-                        // For single texture layouts, update both textures
-                        const isSingleTexture = layouts[currentLayout].singleTexture;
-
-                        if (isSingleTexture) {
-                            horizontalTexture = newTexture;
-                            verticalTexture = newTexture;
-                        } else if (isHorizontal) {
-                            horizontalTexture = newTexture;
-                        } else {
-                            verticalTexture = newTexture;
-                        }
-
-                        // If rows changed (autoDetectRows), we need to rebuild everything
-                        if (layouts[currentLayout].autoDetectRows && config.rows !== oldRows) {
-                            console.log(`Rows changed from ${oldRows} to ${config.rows}, rebuilding scene...`);
-                            clearPatterns();
-                            clearMaterialCache();
-                            buildPatterns();
-                            resolve();
-                            return;
-                        }
-
-                        // Update all cached materials
-                        materialCache.forEach((mats, tileIndex) => {
-                            const index = tileIndex - 1;
-                            const col = index % config.columns;
-                            const rowFromBottom = config.rows - 1 - Math.floor(index / config.columns);
-
-                            const repeatX = 1 / config.columns;
-                            const repeatY = 1 / config.rows;
-                            const offsetX = col / config.columns;
-                            const offsetY = rowFromBottom / config.rows;
-
-                            // For single texture mode, update both materials
-                            if (isSingleTexture || isHorizontal) {
-                                const newTex = horizontalTexture.clone();
-                                newTex.repeat.set(repeatX, repeatY);
-                                newTex.offset.set(offsetX, offsetY);
-                                newTex.needsUpdate = true;
-                                mats.horizontal.map = newTex;
-                                mats.horizontal.needsUpdate = true;
-                            }
-                            if (isSingleTexture || !isHorizontal) {
-                                const newTex = verticalTexture.clone();
-                                newTex.repeat.set(repeatX, repeatY);
-                                newTex.offset.set(offsetX, offsetY);
-                                newTex.needsUpdate = true;
-                                mats.vertical.map = newTex;
-                                mats.vertical.needsUpdate = true;
-                            }
-                        });
-
+                        applyLoadedTexture(img, type);
                         resolve();
                     };
                     img.src = e.target.result;
                 };
-
                 reader.readAsDataURL(file);
             });
         }
@@ -1510,7 +1548,7 @@
             if (!file) return;
 
             fileNameVertical.textContent = file.name;
-            document.querySelector('#uploadVertical .uploadBtn').classList.add('loaded');
+            DOM.uploadVerticalBtn.classList.add('loaded');
 
             await loadTextureFromFile(file, 'vertical');
         });
@@ -1520,7 +1558,7 @@
             if (!file) return;
 
             fileNameHorizontal.textContent = file.name;
-            document.querySelector('#uploadHorizontal .uploadBtn').classList.add('loaded');
+            DOM.uploadHorizontalBtn.classList.add('loaded');
 
             await loadTextureFromFile(file, 'horizontal');
         });
@@ -1533,10 +1571,11 @@
          * ============================================================================
          */
 
-        const urlVerticalInput = document.getElementById('urlVertical');
-        const urlHorizontalInput = document.getElementById('urlHorizontal');
-        const loadUrlVerticalBtn = document.getElementById('loadUrlVerticalBtn');
-        const loadUrlHorizontalBtn = document.getElementById('loadUrlHorizontalBtn');
+        // Use DOM cache aliases for readability
+        const urlVerticalInput = DOM.urlVertical;
+        const urlHorizontalInput = DOM.urlHorizontal;
+        const loadUrlVerticalBtn = DOM.loadUrlVerticalBtn;
+        const loadUrlHorizontalBtn = DOM.loadUrlHorizontalBtn;
 
         // Default URL prefix for texture loading (fallback when just filename is provided)
         const DEFAULT_TEXTURE_URL_PREFIX = 'http://localhost:8080/textures/';
@@ -1547,6 +1586,10 @@
         function resolveTextureUrl(input) {
             // If it's already a full URL, use as-is
             if (input.startsWith('http://') || input.startsWith('https://') || input.startsWith('/')) {
+                return input;
+            }
+            // If it already starts with 'textures/', it's a relative path - use as-is
+            if (input.startsWith('textures/')) {
                 return input;
             }
             // Otherwise, prepend the default prefix
@@ -1561,70 +1604,12 @@
             const url = resolveTextureUrl(input);
 
             return new Promise((resolve, reject) => {
-                const isHorizontal = type === 'horizontal';
-                const previewId = isHorizontal ? 'atlasPreviewHorizontal' : 'atlasPreviewVertical';
-
                 // Add timestamp to bypass cache
                 const urlWithCache = url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
 
                 loader.load(urlWithCache, (tex) => {
-                    // Store old rows to detect if we need a full rebuild
-                    const oldRows = config.rows;
-
-                    const newTexture = createUpscaledTexture(tex, previewId);
-
-                    // For single texture layouts, update both textures
-                    const isSingleTexture = layouts[currentLayout].singleTexture;
-
-                    if (isSingleTexture) {
-                        horizontalTexture = newTexture;
-                        verticalTexture = newTexture;
-                    } else if (isHorizontal) {
-                        horizontalTexture = newTexture;
-                    } else {
-                        verticalTexture = newTexture;
-                    }
-
-                    // If rows changed (autoDetectRows), we need to rebuild everything
-                    if (layouts[currentLayout].autoDetectRows && config.rows !== oldRows) {
-                        console.log(`Rows changed from ${oldRows} to ${config.rows}, rebuilding scene...`);
-                        clearPatterns();
-                        clearMaterialCache();
-                        buildPatterns();
-                        resolve();
-                        return;
-                    }
-
-                    // Update all cached materials
-                    materialCache.forEach((mats, tileIndex) => {
-                        const index = tileIndex - 1;
-                        const col = index % config.columns;
-                        const rowFromBottom = config.rows - 1 - Math.floor(index / config.columns);
-
-                        const repeatX = 1 / config.columns;
-                        const repeatY = 1 / config.rows;
-                        const offsetX = col / config.columns;
-                        const offsetY = rowFromBottom / config.rows;
-
-                        // For single texture mode, update both materials
-                        if (isSingleTexture || isHorizontal) {
-                            const newTex = horizontalTexture.clone();
-                            newTex.repeat.set(repeatX, repeatY);
-                            newTex.offset.set(offsetX, offsetY);
-                            newTex.needsUpdate = true;
-                            mats.horizontal.map = newTex;
-                            mats.horizontal.needsUpdate = true;
-                        }
-                        if (isSingleTexture || !isHorizontal) {
-                            const newTex = verticalTexture.clone();
-                            newTex.repeat.set(repeatX, repeatY);
-                            newTex.offset.set(offsetX, offsetY);
-                            newTex.needsUpdate = true;
-                            mats.vertical.map = newTex;
-                            mats.vertical.needsUpdate = true;
-                        }
-                    });
-
+                    // Use the shared applyLoadedTexture function
+                    applyLoadedTexture(tex.image, type);
                     resolve();
                 }, undefined, (err) => {
                     console.error(`Failed to load texture from URL: ${url}`, err);
@@ -1643,7 +1628,7 @@
                 // Update current URL for auto-reload
                 currentVerticalUrl = resolveTextureUrl(input);
                 fileNameVertical.textContent = 'URL loaded';
-                document.querySelector('#uploadVertical .uploadBtn').classList.add('loaded');
+                DOM.uploadVerticalBtn.classList.add('loaded');
                 // Save input to localStorage per layout
                 localStorage.setItem(`urlVertical_${currentLayout}`, input);
                 // Save as custom URL for Current button
@@ -1666,7 +1651,7 @@
                 // Update current URL for auto-reload
                 currentHorizontalUrl = resolveTextureUrl(input);
                 fileNameHorizontal.textContent = 'URL loaded';
-                document.querySelector('#uploadHorizontal .uploadBtn').classList.add('loaded');
+                DOM.uploadHorizontalBtn.classList.add('loaded');
                 // Save input to localStorage per layout
                 localStorage.setItem(`urlHorizontal_${currentLayout}`, input);
                 // Save as custom URL for Current button
@@ -1695,23 +1680,24 @@
          * ============================================================================
          */
 
-        const layoutSelect = document.getElementById('layoutSelect');
+        // Use DOM cache alias for readability
+        const layoutSelect = DOM.layoutSelect;
 
         // Restore saved layout
         const savedLayout = localStorage.getItem('selectedLayout');
         if (savedLayout && layouts[savedLayout]) {
             currentLayout = savedLayout;
             layoutSelect.value = savedLayout;
-            document.getElementById('layoutDescription').textContent = layouts[savedLayout].description;
+            DOM.layoutDescription.textContent = layouts[savedLayout].description;
         }
 
         // Update UI visibility based on singleTexture mode
         function updateSingleTextureUI() {
             const isSingleTexture = layouts[currentLayout].singleTexture;
-            document.getElementById('atlasPreviewHorizontal').style.display = isSingleTexture ? 'none' : 'block';
-            document.getElementById('labelHorizontal').style.display = isSingleTexture ? 'none' : 'block';
-            document.getElementById('uploadHorizontal').style.display = isSingleTexture ? 'none' : 'flex';
-            document.getElementById('labelVertical').textContent = isSingleTexture ? 'Texture' : 'Vertical (sides)';
+            DOM.atlasPreviewHorizontal.style.display = isSingleTexture ? 'none' : 'block';
+            DOM.labelHorizontal.style.display = isSingleTexture ? 'none' : 'block';
+            DOM.uploadHorizontal.style.display = isSingleTexture ? 'none' : 'flex';
+            DOM.labelVertical.textContent = isSingleTexture ? 'Texture' : 'Vertical (sides)';
         }
         updateSingleTextureUI();
 
@@ -1736,20 +1722,15 @@
             fileNameVertical.textContent = savedUrlVertical ? 'URL saved' : 'default';
             fileNameHorizontal.textContent = isSingleTexture ? '' : (savedUrlHorizontal ? 'URL saved' : 'default');
 
-            const verticalBtn = document.querySelector('#uploadVertical .uploadBtn');
-            const horizontalBtn = document.querySelector('#uploadHorizontal .uploadBtn');
-            verticalBtn.classList.toggle('loaded', !!savedUrlVertical);
-            horizontalBtn.classList.toggle('loaded', !isSingleTexture && !!savedUrlHorizontal);
+            DOM.uploadVerticalBtn.classList.toggle('loaded', !!savedUrlVertical);
+            DOM.uploadHorizontalBtn.classList.toggle('loaded', !isSingleTexture && !!savedUrlHorizontal);
 
             // Update vertical button label for single texture mode
-            verticalBtn.textContent = isSingleTexture ? 'Load Texture' : 'Load Vertical';
+            DOM.uploadVerticalBtn.textContent = isSingleTexture ? 'Load Texture' : 'Load Vertical';
             
             // Update Current button visibility based on whether custom URLs exist for this layout
             const hasCustomUrl = localStorage.getItem(`customUrlVertical_${currentLayout}`);
-            const currentBtn = document.getElementById('presetCurrent');
-            if (currentBtn) {
-                currentBtn.style.display = hasCustomUrl ? 'inline-block' : 'none';
-            }
+            DOM.presetCurrent.style.display = hasCustomUrl ? 'inline-block' : 'none';
         }
         restoreLayoutUrls();
 
@@ -1773,29 +1754,80 @@
          * ============================================================================
          */
 
-        const presetNumberedBtn = document.getElementById('presetNumbered');
-        const presetExampleBtn = document.getElementById('presetExample');
-        const presetCurrentBtn = document.getElementById('presetCurrent');
+        // Use DOM cache aliases for readability
+        const presetNumberedBtn = DOM.presetNumbered;
+        const presetExampleBtn = DOM.presetExample;
+        const presetCurrentBtn = DOM.presetCurrent;
 
-        // Texture presets for each layout
+        // Texture presets for each layout (filenames only, prefix added by resolveTextureUrl)
         const texturePresets = {
             numbered: {
-                full: { vertical: 'textures/full_vertical.png', horizontal: 'textures/full_horizontal.png' },
-                simple: { vertical: 'textures/simple_vertical.png', horizontal: 'textures/simple_horizontal.png' },
-                compact: { vertical: 'textures/compact_vertical.png', horizontal: 'textures/compact_horizontal.png' },
-                horizontal: { vertical: 'textures/horizontal.png', horizontal: 'textures/horizontal.png' },
-                vertical: { vertical: 'textures/vertical.png', horizontal: 'textures/vertical.png' }
+                full: { vertical: 'full_vertical.png', horizontal: 'full_horizontal.png' },
+                simple: { vertical: 'simple_vertical.png', horizontal: 'simple_horizontal.png' },
+                compact: { vertical: 'compact_vertical.png', horizontal: 'compact_horizontal.png' },
+                horizontal: { vertical: 'horizontal.png', horizontal: 'horizontal.png' },
+                vertical: { vertical: 'vertical.png', horizontal: 'vertical.png' }
             },
             example: {
-                full: { vertical: 'textures/full_vertical_ex.png', horizontal: 'textures/full_horizontal_ex.png' },
-                simple: { vertical: 'textures/simple_vertical_ex.png', horizontal: 'textures/simple_horizontal_ex.png' },
-                compact: { vertical: 'textures/compact_vertical_ex.png', horizontal: 'textures/compact_horizontal_ex.png' },
-                horizontal: { vertical: 'textures/horizontal_ex.png', horizontal: 'textures/horizontal_ex.png' },
-                vertical: { vertical: 'textures/vertical_ex.png', horizontal: 'textures/vertical_ex.png' }
+                full: { vertical: 'full_vertical_ex.png', horizontal: 'full_horizontal_ex.png' },
+                simple: { vertical: 'simple_vertical_ex.png', horizontal: 'simple_horizontal_ex.png' },
+                compact: { vertical: 'compact_vertical_ex.png', horizontal: 'compact_horizontal_ex.png' },
+                horizontal: { vertical: 'horizontal_ex.png', horizontal: 'horizontal_ex.png' },
+                vertical: { vertical: 'vertical_ex.png', horizontal: 'vertical_ex.png' }
             }
         };
 
+        /**
+         * Loads a texture set (vertical + optional horizontal) and rebuilds the scene.
+         * @param {string} verticalUrl - URL for vertical texture
+         * @param {string|null} horizontalUrl - URL for horizontal texture (null for single texture layouts)
+         * @param {Function} onComplete - Callback when loading is complete
+         */
+        function loadTextureSet(verticalUrl, horizontalUrl, onComplete) {
+            const isSingleTexture = layouts[currentLayout].singleTexture;
+            const timestamp = '?t=' + Date.now();
+            
+            clearPatterns();
+            clearMaterialCache();
+            
+            let loaded = 0;
+            const targetLoads = isSingleTexture ? 1 : 2;
+            
+            const onLoad = () => {
+                loaded++;
+                if (loaded === targetLoads) {
+                    buildPatterns();
+                    if (onComplete) onComplete();
+                }
+            };
+            
+            const onError = (err) => {
+                console.error('Failed to load texture:', err);
+                onLoad(); // Continue anyway to avoid getting stuck
+            };
+            
+            if (isSingleTexture) {
+                loader.load(verticalUrl + timestamp, (tex) => {
+                    horizontalTexture = createUpscaledTexture(tex, 'atlasPreviewVertical');
+                    verticalTexture = horizontalTexture;
+                    onLoad();
+                }, undefined, onError);
+            } else {
+                loader.load(horizontalUrl + timestamp, (tex) => {
+                    horizontalTexture = createUpscaledTexture(tex, 'atlasPreviewHorizontal');
+                    onLoad();
+                }, undefined, onError);
+                loader.load(verticalUrl + timestamp, (tex) => {
+                    verticalTexture = createUpscaledTexture(tex, 'atlasPreviewVertical');
+                    onLoad();
+                }, undefined, onError);
+            }
+        }
+
         function applyTexturePreset(presetType) {
+            const isSingleTexture = layouts[currentLayout].singleTexture;
+            let verticalUrl, horizontalUrl, uiLabel;
+            
             // Handle 'current' preset - load from custom saved URLs
             if (presetType === 'current') {
                 const customVertical = localStorage.getItem(`customUrlVertical_${currentLayout}`);
@@ -1806,133 +1838,48 @@
                     return;
                 }
                 
-                const isSingleTexture = layouts[currentLayout].singleTexture;
-                
-                // For dual-texture layouts, use default horizontal if no custom horizontal
-                // Note: customHorizontal needs resolveTextureUrl(), but layout defaults are already relative paths
-                const hasCustomHorizontal = !!customHorizontal;
-                const effectiveHorizontal = customHorizontal || layouts[currentLayout].horizontalTexture;
+                verticalUrl = resolveTextureUrl(customVertical);
+                horizontalUrl = customHorizontal 
+                    ? resolveTextureUrl(customHorizontal) 
+                    : layouts[currentLayout].horizontalTexture;
                 
                 // Update URL inputs
                 urlVerticalInput.value = customVertical;
                 if (!isSingleTexture) {
-                    urlHorizontalInput.value = effectiveHorizontal;
+                    urlHorizontalInput.value = customHorizontal || layouts[currentLayout].horizontalTexture;
                 }
                 
-                // Update current URLs for auto-reload
-                // Only use resolveTextureUrl() for custom URLs, not for layout defaults (they're already relative paths)
-                currentVerticalUrl = resolveTextureUrl(customVertical);
-                if (isSingleTexture) {
-                    currentHorizontalUrl = null;
-                } else if (hasCustomHorizontal) {
-                    currentHorizontalUrl = resolveTextureUrl(customHorizontal);
-                } else {
-                    // Use the layout default directly (it's a relative path like 'textures/full_horizontal.png')
-                    currentHorizontalUrl = layouts[currentLayout].horizontalTexture;
-                }
-                
-                // Update button states
-                updatePresetButtons('current');
-                
-                // Save preset choice
-                localStorage.setItem('texturePreset', 'current');
-                
-                // Reload textures
-                clearPatterns();
-                clearMaterialCache();
-                
-                let loaded = 0;
-                const targetLoads = isSingleTexture ? 1 : 2;
-                
-                const onLoad = () => {
-                    loaded++;
-                    if (loaded === targetLoads) {
-                        buildPatterns();
-                    }
-                };
-                
-                const onError = (err) => {
-                    console.error('Failed to load custom texture:', err);
-                    onLoad(); // Continue anyway to avoid getting stuck
-                };
-                
-                if (isSingleTexture) {
-                    loader.load(currentVerticalUrl + '?t=' + Date.now(), (tex) => {
-                        horizontalTexture = createUpscaledTexture(tex, 'atlasPreviewVertical');
-                        verticalTexture = horizontalTexture;
-                        onLoad();
-                    }, undefined, onError);
-                } else {
-                    loader.load(currentHorizontalUrl + '?t=' + Date.now(), (tex) => {
-                        horizontalTexture = createUpscaledTexture(tex, 'atlasPreviewHorizontal');
-                        onLoad();
-                    }, undefined, onError);
-                    loader.load(currentVerticalUrl + '?t=' + Date.now(), (tex) => {
-                        verticalTexture = createUpscaledTexture(tex, 'atlasPreviewVertical');
-                        onLoad();
-                    }, undefined, onError);
-                }
-                
-                // Update UI
-                fileNameVertical.textContent = 'custom';
+                uiLabel = 'custom';
                 fileNameHorizontal.textContent = isSingleTexture ? '' : (customHorizontal ? 'custom' : 'default');
-                return;
+            } else {
+                // Handle numbered/example presets
+                const preset = texturePresets[presetType]?.[currentLayout];
+                if (!preset) return;
+                
+                verticalUrl = resolveTextureUrl(preset.vertical);
+                horizontalUrl = resolveTextureUrl(preset.horizontal);
+                
+                // Update URL inputs
+                urlVerticalInput.value = preset.vertical;
+                if (!isSingleTexture) {
+                    urlHorizontalInput.value = preset.horizontal;
+                }
+                
+                uiLabel = presetType;
+                fileNameHorizontal.textContent = isSingleTexture ? '' : presetType;
             }
             
-            const preset = texturePresets[presetType][currentLayout];
-            if (!preset) return;
-
-            // Update URL inputs
-            urlVerticalInput.value = preset.vertical;
-            if (!layouts[currentLayout].singleTexture) {
-                urlHorizontalInput.value = preset.horizontal;
-            }
-
             // Update current URLs for auto-reload
-            currentVerticalUrl = resolveTextureUrl(preset.vertical);
-            currentHorizontalUrl = layouts[currentLayout].singleTexture ? null : resolveTextureUrl(preset.horizontal);
-
-            // Update button states
+            currentVerticalUrl = verticalUrl;
+            currentHorizontalUrl = isSingleTexture ? null : horizontalUrl;
+            
+            // Update button states and save preset
             updatePresetButtons(presetType);
-
-            // Save preset choice
             localStorage.setItem('texturePreset', presetType);
-
-            // Reload textures
-            clearPatterns();
-            clearMaterialCache();
-
-            const isSingleTexture = layouts[currentLayout].singleTexture;
-            let loaded = 0;
-            const targetLoads = isSingleTexture ? 1 : 2;
-
-            const onLoad = () => {
-                loaded++;
-                if (loaded === targetLoads) {
-                    buildPatterns();
-                }
-            };
-
-            if (isSingleTexture) {
-                loader.load(preset.vertical + '?t=' + Date.now(), (tex) => {
-                    horizontalTexture = createUpscaledTexture(tex, 'atlasPreviewVertical');
-                    verticalTexture = horizontalTexture;
-                    onLoad();
-                });
-            } else {
-                loader.load(preset.horizontal + '?t=' + Date.now(), (tex) => {
-                    horizontalTexture = createUpscaledTexture(tex, 'atlasPreviewHorizontal');
-                    onLoad();
-                });
-                loader.load(preset.vertical + '?t=' + Date.now(), (tex) => {
-                    verticalTexture = createUpscaledTexture(tex, 'atlasPreviewVertical');
-                    onLoad();
-                });
-            }
-
-            // Update UI
-            fileNameVertical.textContent = presetType;
-            fileNameHorizontal.textContent = isSingleTexture ? '' : presetType;
+            
+            // Load textures and update UI
+            loadTextureSet(verticalUrl, horizontalUrl);
+            fileNameVertical.textContent = uiLabel;
         }
 
         // Helper function to update preset button states
@@ -1959,6 +1906,21 @@
             const hasCustomUrl = localStorage.getItem(`customUrlVertical_${currentLayout}`);
             presetCurrentBtn.style.display = hasCustomUrl ? 'inline-block' : 'none';
         }
+
+
+        /**
+         * ============================================================================
+         * UPLOAD BUTTON HANDLERS (moved from inline onclick)
+         * ============================================================================
+         */
+        
+        DOM.uploadVerticalBtn.addEventListener('click', () => {
+            fileVerticalInput.click();
+        });
+        
+        DOM.uploadHorizontalBtn.addEventListener('click', () => {
+            fileHorizontalInput.click();
+        });
 
 
         // Initial load
